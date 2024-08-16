@@ -1,6 +1,8 @@
 package clock
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 type ScalarClock struct {
 	value uint64

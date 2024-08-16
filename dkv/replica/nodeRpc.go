@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sdcc_dkv/clock"
 )
 
 const (
@@ -120,4 +121,20 @@ func (nRpc *NodeRpc) GetRequest(args *GetNodeArgs, reply *GetNodeReply) error {
 func (nRpc *NodeRpc) DelRequest(args *DelRequestArgs, reply *DelRequestReply) error {
 	log.Println(DelRequest, "called")
 	return nil
+}
+
+func TotallyOrderedMulticast(replica *Replica, msg clock.MulticastMessage) {
+	replica.Lock.RLock()
+	defer replica.Lock.RUnlock()
+	size := int(len(replica.SortedKeys))
+	acks := 0
+	targetReplicas := make([]*VNode, size)
+
+	for i := 0; i < size; i++ {
+		targetReplicas[i] = replica.Replicas[replica.SortedKeys[(replica.CurrentIndex+1)%size]]
+		acks++
+	}
+
+	//send to ohthers
+
 }

@@ -15,34 +15,39 @@ const (
 )
 
 type VNode struct {
-	Hostname string
-	Id       uint64
-	SC       *clock.ScalarClock
-	VC       *clock.VectorClock
-	OpMode   string
-	active   int
+	Hostname    string
+	ControlPort string
+	DataPort    string
+	Id          uint64
+	SC          *clock.ScalarClock
+	VC          *clock.VectorClock
+	OpMode      string
+	active      int
 }
 
 type Replica struct {
-	Node              VNode
-	Replicas          map[uint64]*VNode
-	CurrentIndex      int
-	SortedKeys        []uint64
-	Lock              sync.RWMutex
-	Data              *data.Store
+	Node         VNode
+	Replicas     map[uint64]*VNode
+	CurrentIndex int
+	SortedKeys   []uint64
+	Lock         sync.RWMutex
+	Data         *data.Store
+
 	ReplicationFactor uint
 }
 
-func NewNode(hostname string, op string) *VNode {
+func NewNode(hostname string, controlPort, dataPort, op string) *VNode {
 	id := utils.HashKey(hostname)
 
 	return &VNode{
-		Hostname: hostname,
-		Id:       id,
-		SC:       clock.NewScalar(),
-		VC:       clock.NewVectorClock(id),
-		OpMode:   op,
-		active:   1,
+		Hostname:    hostname,
+		ControlPort: controlPort,
+		DataPort:    dataPort,
+		Id:          id,
+		SC:          clock.NewScalar(),
+		VC:          clock.NewVectorClock(id),
+		OpMode:      op,
+		active:      1,
 	}
 }
 
