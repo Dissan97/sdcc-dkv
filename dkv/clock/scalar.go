@@ -5,7 +5,7 @@ import (
 )
 
 type ScalarClock struct {
-	value uint64
+	Timestamp uint64 `json:"key"`
 }
 
 func NewScalar() *ScalarClock {
@@ -13,7 +13,7 @@ func NewScalar() *ScalarClock {
 }
 
 func (sc *ScalarClock) Inc() {
-	atomic.AddUint64(&sc.value, 1)
+	atomic.AddUint64(&sc.Timestamp, 1)
 }
 
 func (sc *ScalarClock) Update(otherScalar uint64) {
@@ -21,16 +21,16 @@ func (sc *ScalarClock) Update(otherScalar uint64) {
 	old := sc.Value()
 
 	if otherScalar >= old {
-		if atomic.CompareAndSwapUint64(&sc.value, old, otherScalar) {
+		if atomic.CompareAndSwapUint64(&sc.Timestamp, old, otherScalar) {
 			return
 		}
 	} else {
-		atomic.AddUint64(&sc.value, 1)
+		atomic.AddUint64(&sc.Timestamp, 1)
 	}
 }
 
 func (sc *ScalarClock) Value() uint64 {
-	return atomic.LoadUint64(&sc.value)
+	return atomic.LoadUint64(&sc.Timestamp)
 }
 func (sc *ScalarClock) Serialize() uint64 {
 	return sc.Value()
@@ -38,5 +38,5 @@ func (sc *ScalarClock) Serialize() uint64 {
 
 // Deserialize from int64
 func (sc *ScalarClock) Deserialize(value uint64) {
-	atomic.StoreUint64(&sc.value, value)
+	atomic.StoreUint64(&sc.Timestamp, value)
 }

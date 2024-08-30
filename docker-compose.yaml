@@ -2,9 +2,26 @@ version: '3.8'
 
 services:
   node1:
-    build: .
-    command:
-      -
+    image: dissan
+    hostname: node1
+    command: ./main --node=node1 --joinNode=node1
+    networks:
+      - dvk-net
+  node2:
+    image: dissan
+    hostname: node2
+    command: ./main --node=node2 --joinNode=node1
+    depends_on:
+      - node1
+    networks:
+      - dvk-net
+  node3:
+    image: dissan
+    hostname: node3
+    depends_on:
+      - node1
+      - node2
+    command: ./main --node=node3 --joinNode=node1
     networks:
       - dvk-net
 

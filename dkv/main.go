@@ -1,15 +1,19 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
+	"sdcc_dkv/dkvNet"
+	"sdcc_dkv/multicast"
 	"sdcc_dkv/replica"
 	"sdcc_dkv/utils"
 	"strings"
+	"time"
 )
 
 //TODO Implement MulticastTotally Ordered Node.Multicast Node.Rpc
@@ -19,7 +23,7 @@ func main() {
 	nodeId := flag.String("node", "localhost", "the node addr of the container")
 	controlPort := flag.String("port", "9000", "the control port of the container")
 	dataPort := flag.String("dataPort", "8080", "the data port of the container")
-	clk := flag.String("clk", "SCALAR", "the clk time of the container")
+	clk := flag.String("clk", utils.Sequential, "the clk time of the container")
 	replicationFactor := flag.Uint("replicationFactor", 3, "the replication factor of the datastore")
 	joinNode := flag.String("joinNode", "localhost", "the join node addr of the container")
 
@@ -27,9 +31,9 @@ func main() {
 	fmt.Println("joinNode:", *joinNode)
 	*clk = strings.ToUpper(*clk)
 
-	if *clk != replica.Sequential && *clk != replica.Causal {
+	if *clk != utils.Sequential && *clk != utils.Causal {
 		log.Println("clk must be SEQUENTIAL or CAUSAL\nSEQUENTIAL CHOSEN")
-		*clk = replica.Sequential
+		*clk = utils.Sequential
 	}
 
 	if *replicationFactor < 3 {
@@ -37,7 +41,7 @@ func main() {
 		*replicationFactor = 3
 	}
 
-	node := replica.NewNode(*nodeId+":", *controlPort, *dataPort, *clk)
+	node := replica.NewNode(*nodeId, *controlPort, *dataPort, *clk)
 
 	rep := replica.NewReplica(node, *replicationFactor)
 
@@ -45,65 +49,75 @@ func main() {
 		"Vnode started\nhostname:", node.Hostname, "\ndataPort:", *dataPort,
 		"\ncontrolPort:", *controlPort,
 	)
-
+	go rep.LogDaemon()
 	go startHttpServices(rep)
 
 	//Join Operation
 
-	var reply replica.JoinNetReply
-	args := replica.JoinNetArgs{}
+	var reply dkvNet.JoinNetReply
+	args := dkvNet.JoinNetArgs{}
 	args.N = node
+	var err error = nil
+	var client *rpc.Client
 
-	client, err := rpc.DialHTTP("tcp", *joinNode+":"+*controlPort)
+	if *joinNode != *nodeId {
 
-	if err != nil {
-		log.Fatal("rpc.DialHttp to "+*joinNode+":"+*controlPort+" error=", err)
-	}
+		for i := 0; i < 5; i++ {
+			client, err = rpc.DialHTTP("tcp", *joinNode+":"+*controlPort)
 
-	err = client.Call(replica.JoinOp, &args, &reply)
-	if err != nil {
-		log.Fatal(*joinNode+":"+*controlPort+".JoinOp error=", err)
+			if err == nil {
+				break
+			}
+			log.Println("rpc.DialHttp to "+*joinNode+":"+*controlPort+" error=", err)
+			time.Sleep(100 * time.Millisecond)
+		}
+		if client == nil {
+			log.Fatal("rpc.DialHTTP to "+*joinNode+":"+*controlPort+" error=", err)
+		}
+		for {
+			err = client.Call(dkvNet.JoinOp, &args, &reply)
+			if err == nil {
+				break
+			}
+			if errors.Is(err, errors.New("node exists")) {
+				log.Println("node exists")
+				break
+			}
+			log.Println("problem in calling", dkvNet.JoinOp, "error=", err)
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if err != nil {
+			log.Fatal("rpc call failed", dkvNet.JoinOp, "error=", err)
+		}
 	}
 
 	log.Println("node:", node.Hostname, "got reply from ", *joinNode+":"+*controlPort+" reply=", reply.Success)
+	for {
+		time.Sleep(5 * time.Second)
+		n, _ := rep.LookupNode([]byte("ciao mondo"))
 
-	replicas := reply.Replicas
-
-	for _, r := range replicas {
-		if r.Id != node.Id {
-			_, err := rep.Join(r)
-			if err != nil {
-				log.Println("rep.Join", err)
-			}
-		}
+		log.Println("me=", node.Hostname, "wanted=", n.Hostname)
 	}
-	i := 0
-	log.Println("Retrieving this replicas now add to mine known replicas")
-	for _, r := range rep.GetReplicas() {
-		log.Println(i, "hostname: ", r.Hostname, "id: ", r.Id)
-		i++
-	}
-
-	getArgs := replica.GetNodeArgs{
-		Key: utils.HashKey("my_key:9000"),
-	}
-	var getReply replica.GetNodeReply
-	err = client.Call(replica.GetNode, &getArgs, &getReply)
-	if err != nil {
-		log.Fatal("call GETNODE:", err)
-	}
-	fmt.Println("key: wanted=", getArgs.Key)
-	fmt.Println(getReply.Node.Hostname, getReply.Node.Id)
+	select {}
 
 }
 
 func startHttpServices(rep *replica.Replica) {
 
-	nodeRpc := new(replica.NodeRpc)
-	nodeRpc.R = rep
+	nodeRpc := new(dkvNet.NodeRpc)
+	if rep.Node.OpMode == "SCALAR" {
+		multicastRpc := new(multicast.TORpc)
+		multicastRpc.MTO = multicast.NewMTOQueue(rep)
+		err := rpc.Register(multicastRpc)
+		if err != nil {
+			log.Fatal("rpc register error=", err)
+		}
+	}
+	nodeRpc.Rep = rep
 	err := rpc.Register(nodeRpc)
 	if err != nil {
-		return
+		log.Fatal("rpc register error=", err)
 	}
 	rpc.HandleHTTP()
 	go func() {
@@ -119,7 +133,7 @@ func startHttpServices(rep *replica.Replica) {
 		}
 	}()
 
-	mux := replica.NewMuxServer(rep)
+	mux := dkvNet.NewMuxServer(rep)
 	err = http.ListenAndServe(rep.Node.Hostname+":"+rep.Node.DataPort, mux)
 	if err != nil {
 		log.Fatal("ListenAndServe", err)

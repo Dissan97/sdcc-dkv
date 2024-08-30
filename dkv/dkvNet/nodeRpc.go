@@ -1,10 +1,12 @@
-package replica
+package dkvNet
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
-	"sdcc_dkv/clock"
+	"net/rpc"
+	"sdcc_dkv/replica"
 )
 
 const (
@@ -17,20 +19,20 @@ const (
 )
 
 type NodeRpc struct {
-	R *Replica
+	Rep *replica.Replica
 }
 
 type JoinNetArgs struct {
-	N *VNode
+	N *replica.VNode
 }
 
 type JoinNetReply struct {
 	Success  bool
-	Replicas map[uint64]*VNode
+	Replicas map[string]*replica.VNode
 }
 
 type LeaveNetArgs struct {
-	Node *VNode
+	Node *replica.VNode
 }
 
 type LeaveNetReply struct {
@@ -38,19 +40,19 @@ type LeaveNetReply struct {
 }
 
 type GetNodeArgs struct {
-	Key uint64
+	Key []byte
 }
 
 type GetNodeReply struct {
-	Node *VNode
+	Node *replica.VNode
 }
 
 type PutRequestArgs struct {
-	Key   uint64
+	Key   []byte
 	Value string
 }
 type PutRequestReply struct {
-	Node    *VNode
+	Node    *replica.VNode
 	Success bool
 }
 type DelRequestArgs struct {
@@ -70,10 +72,31 @@ type GetRequestReply struct {
 
 func (nRpc *NodeRpc) JoinNet(args *JoinNetArgs, reply *JoinNetReply) error {
 	log.Println(JoinOp, "called")
-	replicas, err := nRpc.R.Join(args.N)
+
+	//joining the net
+	replicas, err := nRpc.Rep.Join(args.N)
 	if err != nil {
 		return err
 	}
+
+	// notify the targets
+	nRpc.Rep.Lock.RLock()
+	defer nRpc.Rep.Lock.RUnlock()
+
+	for _, node := range replicas {
+		go func(nT, node *replica.VNode) {
+			client, err := rpc.DialHTTP("tcp", nT.Hostname+":"+nT.ControlPort)
+			if err != nil {
+				log.Println("notify ", JoinOp, err)
+			}
+			var dummy JoinNetReply
+			args := JoinNetArgs{}
+			args.N = node
+			err = client.Call(JoinOp, &args, &dummy)
+
+		}(args.N, node)
+	}
+
 	reply.Success = true
 	reply.Replicas = replicas
 	return nil
@@ -85,7 +108,7 @@ func (nRpc *NodeRpc) LeaveNet(args *LeaveNetArgs, reply *LeaveNetArgs) error {
 
 func (nRpc *NodeRpc) LookupNode(args *GetNodeArgs, reply *GetNodeReply) error {
 	log.Println(GetNode, "called")
-	reply.Node, _ = nRpc.R.LookupNode(args.Key)
+	reply.Node, _ = nRpc.Rep.LookupNode(args.Key)
 	if reply.Node == nil {
 		return errors.New(GetNode + " Node not found")
 	}
@@ -94,19 +117,19 @@ func (nRpc *NodeRpc) LookupNode(args *GetNodeArgs, reply *GetNodeReply) error {
 
 // todo adjust this synchronization
 func (nRpc *NodeRpc) PutRequest(args *PutRequestArgs, reply *PutRequestReply) error {
-	vNode, index := nRpc.R.LookupNode(args.Key)
+	vNode, index := nRpc.Rep.LookupNode(args.Key)
 	if vNode == nil {
 		reply.Success = false
 		return errors.New(PutRequest + " Node not found")
 	}
-	nRpc.R.Lock.RLock()
-	defer nRpc.R.Lock.RUnlock()
-	size := len(nRpc.R.Replicas)
+	nRpc.Rep.Lock.RLock()
+	defer nRpc.Rep.Lock.RUnlock()
+	size := len(nRpc.Rep.Replicas)
 
-	if vNode.Id == nRpc.R.Node.Id {
-		for i := 0; i < int(nRpc.R.ReplicationFactor); i++ {
+	if bytes.Equal(vNode.Guid, nRpc.Rep.Node.Guid) {
+		for i := 0; i < int(nRpc.Rep.ReplicationFactor); i++ {
 			//forward request to the others and wait response circular ring
-			v := nRpc.R.SortedKeys[(index+i)%size]
+			v := nRpc.Rep.SortedKeys[(index+i)%size]
 			fmt.Println(v)
 		}
 	}
@@ -121,20 +144,4 @@ func (nRpc *NodeRpc) GetRequest(args *GetNodeArgs, reply *GetNodeReply) error {
 func (nRpc *NodeRpc) DelRequest(args *DelRequestArgs, reply *DelRequestReply) error {
 	log.Println(DelRequest, "called")
 	return nil
-}
-
-func TotallyOrderedMulticast(replica *Replica, msg clock.MulticastMessage) {
-	replica.Lock.RLock()
-	defer replica.Lock.RUnlock()
-	size := int(len(replica.SortedKeys))
-	acks := 0
-	targetReplicas := make([]*VNode, size)
-
-	for i := 0; i < size; i++ {
-		targetReplicas[i] = replica.Replicas[replica.SortedKeys[(replica.CurrentIndex+1)%size]]
-		acks++
-	}
-
-	//send to ohthers
-
 }

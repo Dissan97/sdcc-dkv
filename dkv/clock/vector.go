@@ -6,12 +6,12 @@ import (
 
 type VectorClock struct {
 	mu     sync.RWMutex
-	values map[uint64]uint64
-	Id     uint64
+	values map[string]uint64
+	Id     string
 }
 
-func NewVectorClock(id uint64) *VectorClock {
-	mp := make(map[uint64]uint64)
+func NewVectorClock(id string) *VectorClock {
+	mp := make(map[string]uint64)
 	mp[id] = 0
 	return &VectorClock{
 		values: mp,
@@ -36,19 +36,19 @@ func (vc *VectorClock) Update(clock *VectorClock) {
 	vc.values[vc.Id]++
 }
 
-func (vc *VectorClock) NewNode(id uint64, actualValue uint64) {
+func (vc *VectorClock) NewNode(id string, actualValue uint64) {
 	vc.mu.Lock()
 	defer vc.mu.Unlock()
 	vc.values[id] = actualValue
 }
 
-func (vc *VectorClock) RemoveNode(id uint64) {
+func (vc *VectorClock) RemoveNode(id string) {
 	vc.mu.Lock()
 	defer vc.mu.Unlock()
 	delete(vc.values, id)
 }
 
-func (vc *VectorClock) Value() map[uint64]uint64 {
+func (vc *VectorClock) Value() map[string]uint64 {
 	vc.mu.RLock()
 	defer vc.mu.RUnlock()
 	return vc.values

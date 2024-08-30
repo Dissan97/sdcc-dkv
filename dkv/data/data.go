@@ -5,18 +5,23 @@ import (
 	"sync"
 )
 
+type Value struct {
+	Timestamp string
+	Value     string
+}
+
 type Store struct {
-	dataStore map[uint64]string // [md5(key)]value
+	dataStore map[string]Value // [md5(key)]value
 	Mu        sync.RWMutex
 }
 
 func NewStore() *Store {
 	return &Store{
-		dataStore: make(map[uint64]string),
+		dataStore: make(map[string]Value),
 	}
 }
 
-func (s *Store) Put(key uint64, value string) {
+func (s *Store) Put(key string, value Value) {
 	fmt.Println("put called")
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
@@ -26,7 +31,7 @@ func (s *Store) Put(key uint64, value string) {
 	return
 }
 
-func (s *Store) Get(key uint64) string {
+func (s *Store) Get(key string) Value {
 
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
@@ -35,10 +40,10 @@ func (s *Store) Get(key uint64) string {
 		return ret
 	}
 
-	return ""
+	return Value{}
 }
 
-func (s *Store) Del(key uint64) string {
+func (s *Store) Del(key string) Value {
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
 	if ret, ok := s.dataStore[key]; ok {
@@ -46,5 +51,6 @@ func (s *Store) Del(key uint64) string {
 		return ret
 	}
 
-	return ""
+	return Value{
+		Timestamp: ""}
 }
