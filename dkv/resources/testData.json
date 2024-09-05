@@ -1,0 +1,626 @@
+[
+  {
+    "Key": "Trip Purpose",
+    "Value": "Visit historical sites and enjoy local cuisine."
+  },
+  {
+    "Key": "Destination",
+    "Value": "Paris, France"
+  },
+  {
+    "Key": "Travel Dates",
+    "Value": "October 1, 2024 - October 10, 2024"
+  },
+  {
+    "Key": "Activities",
+    "Value": "Sightseeing, museum tours, culinary experiences"
+  },
+  {
+    "Key": "Accommodation",
+    "Value": "Hotel in the city center"
+  },
+  {
+    "Key": "Budget",
+    "Value": "Approx. $2000"
+  },
+  {
+    "Key": "Flight Details",
+    "Value": "Direct flight with Air France"
+  },
+  {
+    "Key": "Departure City",
+    "Value": "New York City"
+  },
+  {
+    "Key": "Arrival City",
+    "Value": "Paris"
+  },
+  {
+    "Key": "Departure Time",
+    "Value": "October 1, 2024, 10:00 AM"
+  },
+  {
+    "Key": "Arrival Time",
+    "Value": "October 1, 2024, 11:00 PM"
+  },
+  {
+    "Key": "Return Flight",
+    "Value": "October 10, 2024, 2:00 PM"
+  },
+  {
+    "Key": "Passport Validity",
+    "Value": "Valid until March 2025"
+  },
+  {
+    "Key": "Visa Requirements",
+    "Value": "No visa required for US citizens"
+  },
+  {
+    "Key": "Local Currency",
+    "Value": "Euro"
+  },
+  {
+    "Key": "Exchange Rate",
+    "Value": "1 USD = 0.93 EUR"
+  },
+  {
+    "Key": "Emergency Contact",
+    "Value": "John Doe, +1-555-123-4567"
+  },
+  {
+    "Key": "Travel Insurance",
+    "Value": "Covered by XYZ Insurance"
+  },
+  {
+    "Key": "Health Precautions",
+    "Value": "No specific vaccinations required"
+  },
+  {
+    "Key": "Local Transportation",
+    "Value": "Metro, buses, taxis"
+  },
+  {
+    "Key": "Language",
+    "Value": "French"
+  },
+  {
+    "Key": "Accommodation Check-in Time",
+    "Value": "2:00 PM"
+  },
+  {
+    "Key": "Accommodation Check-out Time",
+    "Value": "12:00 PM"
+  },
+  {
+    "Key": "Dining Preferences",
+    "Value": "Vegetarian"
+  },
+  {
+    "Key": "Breakfast Included",
+    "Value": "Yes"
+  },
+  {
+    "Key": "Lunch Options",
+    "Value": "Local bistros and cafes"
+  },
+  {
+    "Key": "Dinner Reservations",
+    "Value": "Le Jules Verne, 7:00 PM on October 3"
+  },
+  {
+    "Key": "Sightseeing Tours",
+    "Value": "Eiffel Tower, Louvre Museum, Notre-Dame Cathedral"
+  },
+  {
+    "Key": "Day Trips",
+    "Value": "Versailles Palace, Montmartre"
+  },
+  {
+    "Key": "Shopping Areas",
+    "Value": "Champs-Élysées, Le Marais"
+  },
+  {
+    "Key": "Local Attractions",
+    "Value": "Seine River cruise, Latin Quarter"
+  },
+  {
+    "Key": "Nightlife",
+    "Value": "Moulin Rouge, local jazz bars"
+  },
+  {
+    "Key": "Public Wi-Fi",
+    "Value": "Available in most public areas"
+  },
+  {
+    "Key": "Safety Precautions",
+    "Value": "Keep belongings secure, be cautious in crowded areas"
+  },
+  {
+    "Key": "Weather Forecast",
+    "Value": "Mild temperatures, occasional rain"
+  },
+  {
+    "Key": "Local Festivals",
+    "Value": "October Wine Festival"
+  },
+  {
+    "Key": "Cultural Etiquette",
+    "Value": "Polite greetings, respect local customs"
+  },
+  {
+    "Key": "Emergency Numbers",
+    "Value": "Police: 17, Ambulance: 15"
+  },
+  {
+    "Key": "Medical Facilities",
+    "Value": "Hospitals: Pitié-Salpêtrière, Georges Pompidou"
+  },
+  {
+    "Key": "Shopping List",
+    "Value": "Souvenirs, French wine, local cheese"
+  },
+  {
+    "Key": "Photography Spots",
+    "Value": "Eiffel Tower at sunset, Montmartre street views"
+  },
+  {
+    "Key": "Fitness Facilities",
+    "Value": "Gym at the hotel, local parks"
+  },
+  {
+    "Key": "Spa Services",
+    "Value": "Book in advance for a relaxing experience"
+  },
+  {
+    "Key": "Local Cuisine",
+    "Value": "Croissants, escargot, macarons"
+  },
+  {
+    "Key": "Food Allergies",
+    "Value": "None"
+  },
+  {
+    "Key": "Travel Guides",
+    "Value": "Lonely Planet Paris, Rick Steves' Paris"
+  },
+  {
+    "Key": "Local SIM Card",
+    "Value": "Available at the airport"
+  },
+  {
+    "Key": "International Roaming",
+    "Value": "Enabled with your current plan"
+  },
+  {
+    "Key": "Charging Adapters",
+    "Value": "Type C or E/F plugs"
+  },
+  {
+    "Key": "Travel Pillow",
+    "Value": "For comfort during the flight"
+  },
+  {
+    "Key": "First Aid Kit",
+    "Value": "Include basic medications and bandages"
+  },
+  {
+    "Key": "Books/Entertainment",
+    "Value": "Novels, travel magazines"
+  },
+  {
+    "Key": "Camera Equipment",
+    "Value": "DSLR, extra batteries, memory cards"
+  },
+  {
+    "Key": "Notebook",
+    "Value": "For journaling and notes"
+  },
+  {
+    "Key": "Reusable Water Bottle",
+    "Value": "Stay hydrated"
+  },
+  {
+    "Key": "Umbrella",
+    "Value": "For potential rain"
+  },
+  {
+    "Key": "Sunscreen",
+    "Value": "SPF 30 or higher"
+  },
+  {
+    "Key": "Travel Snacks",
+    "Value": "Granola bars, nuts"
+  },
+  {
+    "Key": "Local Contacts",
+    "Value": "Friends in Paris, tour guides"
+  },
+  {
+    "Key": "Daily Itinerary",
+    "Value": "Detailed schedule of activities"
+  },
+  {
+    "Key": "Check-in Reminders",
+    "Value": "Flight, hotel, car rental"
+  },
+  {
+    "Key": "Packing List",
+    "Value": "Clothing, toiletries, documents"
+  },
+  {
+    "Key": "Local Emergency Services",
+    "Value": "Police, fire department, medical assistance"
+  },
+  {
+    "Key": "Local Time Zone",
+    "Value": "Central European Time (CET)"
+  },
+  {
+    "Key": "Local Etiquette",
+    "Value": "Learn basic French phrases"
+  },
+  {
+    "Key": "Historical Sites",
+    "Value": "Pantheon, Sainte-Chapelle"
+  },
+  {
+    "Key": "Museums",
+    "Value": "Musée d'Orsay, Musée de l'Orangerie"
+  },
+  {
+    "Key": "Parks",
+    "Value": "Jardin des Tuileries, Luxembourg Gardens"
+  },
+  {
+    "Key": "Architectural Highlights",
+    "Value": "Arc de Triomphe, Sacré-Cœur Basilica"
+  },
+  {
+    "Key": "Theater Shows",
+    "Value": "Book tickets for local performances"
+  },
+  {
+    "Key": "Local Markets",
+    "Value": "Marché des Enfants Rouges, Marché Bastille"
+  },
+  {
+    "Key": "Public Transport Pass",
+    "Value": "Purchase a Paris Visite pass"
+  },
+  {
+    "Key": "Museum Pass",
+    "Value": "Paris Museum Pass for entry to multiple museums"
+  },
+  {
+    "Key": "Guidebooks",
+    "Value": "Detailed guides for Paris attractions"
+  },
+  {
+    "Key": "Souvenirs",
+    "Value": "Eiffel Tower replicas, French wine"
+  },
+  {
+    "Key": "Health Insurance",
+    "Value": "Verify coverage for international travel"
+  },
+  {
+    "Key": "Travel App",
+    "Value": "Install a Paris travel guide app"
+  },
+  {
+    "Key": "Local Events",
+    "Value": "Check for concerts, exhibitions"
+  },
+  {
+    "Key": "Cultural Experiences",
+    "Value": "Attend a cooking class, wine tasting"
+  },
+  {
+    "Key": "Local Food Specialties",
+    "Value": "Try authentic French pastries and dishes"
+  },
+  {
+    "Key": "Travel Safety Tips",
+    "Value": "Keep valuables secure, avoid isolated areas"
+  },
+  {
+    "Key": "Money Management",
+    "Value": "Notify bank of travel plans, carry some cash"
+  },
+  {
+    "Key": "Local Customs",
+    "Value": "Respect local dining etiquette, greetings"
+  },
+  {
+    "Key": "Transportation Booking",
+    "Value": "Book airport transfers in advance"
+  },
+  {
+    "Key": "Hotel Amenities",
+    "Value": "Check for free Wi-Fi, breakfast options"
+  },
+  {
+    "Key": "Local Connectivity",
+    "Value": "Wi-Fi in hotel, cafes, public places"
+  },
+  {
+    "Key": "Travel Checklist",
+    "Value": "Passports, tickets, reservations"
+  },
+  {
+    "Key": "Travel Diary",
+    "Value": "Document daily experiences and observations"
+  },
+  {
+    "Key": "Weather Gear",
+    "Value": "Pack accordingly for the season"
+  },
+  {
+    "Key": "Local Laws",
+    "Value": "Familiarize yourself with French laws and regulations"
+  },
+  {
+    "Key": "Hotel Contact Information",
+    "Value": "Keep the hotel's address and phone number handy"
+  },
+  {
+    "Key": "Local Cuisine Recommendations",
+    "Value": "Must-try French restaurants and dishes"
+  },
+  {
+    "Key": "Travel Budget Allocation",
+    "Value": "Plan daily spending, set aside emergency funds"
+  },
+  {
+    "Key": "Travel Appointments",
+    "Value": "Confirm reservations for tours and dining"
+  },
+  {
+    "Key": "Local Transportation Options",
+    "Value": "Taxi, bike rentals, car hires"
+  },
+  {
+    "Key": "Language Assistance",
+    "Value": "Download translation apps or learn key phrases"
+  },
+  {
+    "Key": "Cultural Sites",
+    "Value": "Visit local cultural and historical landmarks"
+  },
+  {
+    "Key": "Travel Security",
+    "Value": "Keep a copy of important documents separate from originals"
+  },
+  {
+    "Key": "Travel Backpack",
+    "Value": "To carry all your essentials and personal items comfortably during the trip."
+  },
+  {
+    "Key": "Travel Pillow",
+    "Value": "To ensure comfort during long flights or train journeys."
+  },
+  {
+    "Key": "Portable Charger",
+    "Value": "To keep your electronic devices charged while on the go."
+  },
+  {
+    "Key": "Travel Adapter",
+    "Value": "To plug your electronic devices into local outlets."
+  },
+  {
+    "Key": "First Aid Kit",
+    "Value": "For basic medical needs and emergencies."
+  },
+  {
+    "Key": "Reusable Water Bottle",
+    "Value": "To stay hydrated and reduce plastic waste."
+  },
+  {
+    "Key": "Umbrella",
+    "Value": "To protect yourself from unexpected rain."
+  },
+  {
+    "Key": "Sunscreen",
+    "Value": "To protect your skin from sunburn and UV rays."
+  },
+  {
+    "Key": "Travel Guidebook",
+    "Value": "To help navigate and discover places of interest in your destination."
+  },
+  {
+    "Key": "Comfortable Walking Shoes",
+    "Value": "To ensure comfort during long days of sightseeing and walking."
+  },
+  {
+    "Key": "Travel-Sized Toiletries",
+    "Value": "To comply with airline regulations and keep your toiletries organized."
+  },
+  {
+    "Key": "Camera",
+    "Value": "To capture memorable moments and experiences during your trip."
+  },
+  {
+    "Key": "Notebook and Pen",
+    "Value": "To jot down travel notes, important information, and reflections."
+  },
+  {
+    "Key": "Cash and Credit Cards",
+    "Value": "For making purchases and handling expenses during your trip."
+  },
+  {
+    "Key": "Travel Insurance",
+    "Value": "To provide coverage for unexpected events such as trip cancellations or medical emergencies."
+  },
+  {
+    "Key": "Snacks",
+    "Value": "To have something to eat during travel or when local food options are unavailable."
+  },
+  {
+    "Key": "Laundry Bag",
+    "Value": "To keep dirty clothes separate from clean ones during your trip."
+  },
+  {
+    "Key": "Foldable Tote Bag",
+    "Value": "For carrying extra items or purchases while traveling."
+  },
+  {
+    "Key": "Hand Sanitizer",
+    "Value": "To maintain hygiene and cleanliness, especially in public places."
+  },
+  {
+    "Key": "Travel Locks",
+    "Value": "To secure your luggage and belongings while traveling."
+  },
+  {
+    "Key": "Travel Umbrella",
+    "Value": "To be prepared for unexpected weather conditions during your trip."
+  },
+  {
+    "Key": "Sunglasses",
+    "Value": "To protect your eyes from sunlight and UV rays."
+  },
+  {
+    "Key": "Travel-sized Detergent",
+    "Value": "For washing clothes if needed during your trip."
+  },
+  {
+    "Key": "Power Bank",
+    "Value": "To provide extra power for your electronic devices when needed."
+  },
+  {
+    "Key": "Medication",
+    "Value": "To manage any personal health needs or conditions while traveling."
+  },
+  {
+    "Key": "Travel Documents Folder",
+    "Value": "To keep all your important documents, tickets, and reservations organized."
+  },
+  {
+    "Key": "Travel Guide App",
+    "Value": "To have access to local information and maps on your phone."
+  },
+  {
+    "Key": "Comfortable Clothing",
+    "Value": "For comfort and suitability for various activities during your trip."
+  },
+  {
+    "Key": "Travel Sewing Kit",
+    "Value": "To make minor repairs to clothing or gear if needed."
+  },
+  {
+    "Key": "Portable Fan",
+    "Value": "To stay cool during hot weather or in areas with limited air conditioning."
+  },
+  {
+    "Key": "Plastic Bags",
+    "Value": "For separating wet or dirty items and organizing your luggage."
+  },
+  {
+    "Key": "Flashlight or Headlamp",
+    "Value": "To have light available in case of power outages or for night-time activities."
+  },
+  {
+    "Key": "Travel Size Iron",
+    "Value": "To keep your clothes wrinkle-free during your trip."
+  },
+  {
+    "Key": "Travel Size Condoms",
+    "Value": "For safe sex and personal protection during your travels."
+  },
+  {
+    "Key": "Notebook",
+    "Value": "For jotting down travel plans, to-do lists, and personal notes."
+  },
+  {
+    "Key": "Backup Credit Card",
+    "Value": "To have an alternative payment method in case of issues with your primary card."
+  },
+  {
+    "Key": "Backup Phone Charger",
+    "Value": "To ensure you have a spare charger in case the primary one gets lost or damaged."
+  },
+  {
+    "Key": "Emergency Contact List",
+    "Value": "To have quick access to important contacts in case of emergencies."
+  },
+  {
+    "Key": "Travel Appointments",
+    "Value": "To keep track of scheduled tours, meetings, or other appointments."
+  },
+  {
+    "Key": "Local Maps",
+    "Value": "To help navigate and explore the area without relying solely on your phone."
+  },
+  {
+    "Key": "Binoculars",
+    "Value": "For sightseeing and observing distant landmarks or wildlife."
+  },
+  {
+    "Key": "Travel Guide",
+    "Value": "To get detailed information about tourist spots and local attractions."
+  },
+  {
+    "Key": "Reusable Shopping Bags",
+    "Value": "To minimize plastic use and carry purchases efficiently."
+  },
+  {
+    "Key": "Travel Alarm Clock",
+    "Value": "To wake up on time without relying on your phone's alarm."
+  },
+  {
+    "Key": "Waterproof Phone Case",
+    "Value": "To protect your phone from water damage, especially in rainy weather or near water activities."
+  },
+  {
+    "Key": "Travel Journal",
+    "Value": "To document your experiences, thoughts, and memories from the trip."
+  },
+  {
+    "Key": "Local Language Phrasebook",
+    "Value": "To help communicate with locals and understand basic phrases in the local language."
+  },
+  {
+    "Key": "Power Strip",
+    "Value": "To charge multiple devices at once, especially if your accommodation has limited outlets."
+  },
+  {
+    "Key": "Travel Scissors",
+    "Value": "To have a handy tool for cutting tasks, but remember to pack it in checked luggage if flying."
+  },
+  {
+    "Key": "Travel-sized Cleaning Supplies",
+    "Value": "For quick clean-ups of spills or messes during your trip."
+  },
+  {
+    "Key": "Travel-sized Laundry Detergent",
+    "Value": "For washing clothes if needed during your trip."
+  },
+  {
+    "Key": "Portable Water Filter",
+    "Value": "To ensure you have access to clean drinking water, especially if traveling to areas with questionable water quality."
+  },
+  {
+    "Key": "Backup External Hard Drive",
+    "Value": "To back up important files and photos from your devices."
+  },
+  {
+    "Key": "Travel-size Tissues",
+    "Value": "For convenience in case of spills, sneezes, or other needs."
+  },
+  {
+    "Key": "Travel-size Hand Cream",
+    "Value": "To keep your hands moisturized, especially in dry climates or during frequent washing."
+  },
+  {
+    "Key": "Personal Safety Alarm",
+    "Value": "To alert others and deter potential threats in case of an emergency."
+  },
+  {
+    "Key": "Travel-size Deodorant",
+    "Value": "To stay fresh and maintain personal hygiene."
+  },
+  {
+    "Key": "Small Backpack or Daypack",
+    "Value": "For day trips and carrying essentials while exploring."
+  }
+]

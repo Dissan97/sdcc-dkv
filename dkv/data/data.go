@@ -12,45 +12,47 @@ type Value struct {
 
 type Store struct {
 	dataStore map[string]Value // [md5(key)]value
-	Mu        sync.RWMutex
+	Lock      sync.RWMutex
 }
 
-func NewStore() *Store {
-	return &Store{
-		dataStore: make(map[string]Value),
-	}
+func (store *Store) Init() {
+	store.dataStore = make(map[string]Value)
 }
 
-func (s *Store) Put(key string, value Value) {
+func (store *Store) Put(key string, value Value) {
 	fmt.Println("put called")
-	s.Mu.Lock()
-	defer s.Mu.Unlock()
+	store.Lock.Lock()
+	defer store.Lock.Unlock()
 
-	s.dataStore[key] = value
+	store.dataStore[key] = value
 
 	return
 }
 
-func (s *Store) Get(key string) Value {
+func (store *Store) Get(key string) Value {
 
-	s.Mu.RLock()
-	defer s.Mu.RUnlock()
+	store.Lock.RLock()
+	defer store.Lock.RUnlock()
 
-	if ret, ok := s.dataStore[key]; ok {
+	if ret, ok := store.dataStore[key]; ok {
 		return ret
 	}
 
 	return Value{}
 }
 
-func (s *Store) Del(key string) Value {
-	s.Mu.Lock()
-	defer s.Mu.Unlock()
-	if ret, ok := s.dataStore[key]; ok {
-		delete(s.dataStore, key)
+func (store *Store) Del(key string) Value {
+	store.Lock.Lock()
+	defer store.Lock.Unlock()
+	if ret, ok := store.dataStore[key]; ok {
+		delete(store.dataStore, key)
 		return ret
 	}
 
 	return Value{
 		Timestamp: ""}
+}
+
+func (store *Store) GetMap() map[string]Value {
+	return store.dataStore
 }

@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "multicast_port": 10000,
+  "overlay_port": 9000,
+  "http_port": 8080
+}

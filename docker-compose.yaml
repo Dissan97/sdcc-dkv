@@ -1,27 +1,45 @@
 version: '3.8'
 
 services:
-  node1:
-    image: dissan
+  alpha:
+    image: dkv
     hostname: node1
-    command: ./main --node=node1 --joinNode=node1
+    command: ./main --hostname=alpha --nto_contact=beta:9000:10000,gamma:9000:10000,delta:9000:10000 --type=server
+    ports:
+      - "10000:10000"
+      - "8080:8080"
+
     networks:
       - dvk-net
-  node2:
-    image: dissan
+  beta:
+    image: dkv
     hostname: node2
-    command: ./main --node=node2 --joinNode=node1
-    depends_on:
-      - node1
+    command: ./main --hostname=beta --nto_contact=alpha:9000:10000,gamma:9000:10000,delta:9000:10000 --type=server
+    ports:
+      - "10001:10000"
+      - "8081:8080"
     networks:
       - dvk-net
-  node3:
-    image: dissan
-    hostname: node3
-    depends_on:
-      - node1
-      - node2
-    command: ./main --node=node3 --joinNode=node1
+
+  gamma:
+    image: dkv
+    hostname: gamma
+
+    command: ./main --hostname=gamma --nto_contact=alpha:9000:10000,beta:9000:10000,delta:9000:10000 --type=server
+    ports:
+      - "10002:10000"
+      - "8082:8080"
+    networks:
+      - dvk-net
+
+  delta:
+    image: dkv
+    hostname: delta
+
+    command: ./main --hostname=delta --nto_contact=alpha:9000:10000,beta:9000:10000,gamma:9000:10000 --type=server
+    ports:
+      - "10003:10000"
+      - "8083:8080"
     networks:
       - dvk-net
 
