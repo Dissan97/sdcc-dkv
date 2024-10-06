@@ -1,6 +1,6 @@
 package utils
 
 const (
-	Causal     = "CAUSAL"
-	Sequential = "SEQUENTIAL"
+	Causal     = "Causal"
+	Sequential = "Sequential"
 )

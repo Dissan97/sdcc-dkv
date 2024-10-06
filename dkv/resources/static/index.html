@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DKV</title>
+    <link rel="stylesheet" href="/style/index.css"> <!-- Link to the CSS file -->
+    <script src="/script/index.js" defer></script> <!-- Link to the JavaScript file -->
+</head>
+<body>
+<div class="container">
+    <h1>Key Value Datastore</h1>
+
+    <div class="operation">
+        <h2>Put Operation</h2>
+        <label for="putMessageKey">PUT KEY</label>
+        <input type="text" id="putMessageKey" placeholder="Enter key">
+        <label for="putMessageValue">PUT VALUE</label>
+        <input type="text" id="putMessageValue" placeholder="Enter Value">
+        <button onclick="sendPut()">Send</button>
+    </div>
+
+    <div class="operation">
+        <h2>Get Operation</h2>
+        <label for="getMessageKey">GET KEY</label>
+        <input type="text" id="getMessageKey" placeholder="Enter your key">
+        <button onclick="sendGet()">Send</button>
+    </div>
+
+    <div class="operation">
+        <h2>Delete Operation</h2>
+        <label for="delMessageKey">DELETE KEY</label>
+        <input type="text" id="delMessageKey" placeholder="Enter your key">
+        <button onclick="sendDelete()">Send</button>
+    </div>
+
+    <!-- Div to display the response message -->
+    <div id="response" class="response"></div>
+</div>
+</body>
+</html>

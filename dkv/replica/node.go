@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 	"log"
+	"net/rpc"
 	"sdcc_dkv/data"
 	"sort"
 	"sync"
@@ -33,19 +34,22 @@ func (vn *VNode) Init(hostname, guid, overlayPort, multicastPort, dataPort strin
 }
 
 type Replica struct {
-	Node              *VNode
-	Replicas          map[string]*VNode
-	CurrentIndex      int
-	SortedKeys        []string
-	Lock              sync.RWMutex
-	DataStore         *data.Store
-	ReplicationFactor int
-	HashFunc          func() hash.Hash
-	HashBit           int
-	Latency           time.Duration
+	Node          *VNode
+	Replicas      map[string]*VNode
+	CurrentIndex  int
+	SortedKeys    []string
+	Lock          sync.RWMutex
+	DataStore     *data.Store
+	HashFunc      func() hash.Hash
+	HashBit       int
+	RetryDial     int
+	RetryWait     time.Duration
+	Latency       time.Duration
+	OperationMode string
 }
 
-func (rep *Replica) Init(hostname, multicastPort, overlayPort, dataPort, hashFunc string, rf, latency int) {
+func (rep *Replica) Init(hostname, multicastPort, overlayPort, dataPort, hashFunc string, latency, retryDial,
+	retryWait int, opMode string) {
 
 	var hf func() hash.Hash
 	if hashFunc == "md5" {
@@ -69,10 +73,12 @@ func (rep *Replica) Init(hostname, multicastPort, overlayPort, dataPort, hashFun
 	rep.CurrentIndex = 0
 	rep.SortedKeys = sk
 	rep.DataStore = datastore
-	rep.ReplicationFactor = rf
 	rep.HashFunc = hf
 	rep.HashBit = hf().Size()
+	rep.RetryDial = retryDial
+	rep.RetryWait = time.Duration(retryWait) * time.Millisecond
 	rep.Latency = time.Duration(latency) * time.Millisecond
+	rep.OperationMode = opMode
 	rep.Replicas[node.Guid] = node
 
 }
@@ -104,7 +110,7 @@ func (rep *Replica) Info() {
 	log.Print(msg)
 }
 
-func (rep *Replica) Join(hostname, oPort, mPort string) error {
+func (rep *Replica) Join(hostname, oPort, mPort, dPort string) error {
 	if hostname == "" {
 		return errors.New("node is empty")
 	}
@@ -115,7 +121,7 @@ func (rep *Replica) Join(hostname, oPort, mPort string) error {
 	if _, ok := rep.Replicas[guid]; ok {
 		return errors.New("node exists")
 	}
-	node := &VNode{Hostname: hostname, Guid: guid, OverlayPort: oPort, MulticastPort: mPort}
+	node := &VNode{Hostname: hostname, Guid: guid, OverlayPort: oPort, MulticastPort: mPort, DataPort: dPort}
 	rep.Replicas[guid] = node
 	rep.SortedKeys = append(rep.SortedKeys, node.Guid)
 
@@ -174,6 +180,26 @@ func (rep *Replica) GetReplicas() map[string]*VNode {
 	rep.Lock.RLock()
 	defer rep.Lock.RUnlock()
 	return rep.Replicas
+}
+
+// DialWithRetries Utility function for dialing with retries
+func (rep *Replica) DialWithRetries(host string) (*rpc.Client, error) {
+	var err error
+	var client *rpc.Client
+	for i := 0; i < rep.RetryDial; i++ {
+		client, err = rpc.Dial("tcp", host)
+		if err != nil {
+			log.Printf("Retry dialing node %s after failure", host)
+			time.Sleep(rep.RetryWait)
+			continue
+		}
+		break
+	}
+	return client, err
+}
+
+func (rep *Replica) SimulateLatency() {
+	time.Sleep(rep.Latency)
 }
 
 func (rep *Replica) LogDaemon() {

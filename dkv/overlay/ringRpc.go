@@ -22,11 +22,12 @@ type JoinRingArgs struct {
 	Hostname      string
 	OverlayPort   string
 	MulticastPort string
+	DataPort      string
 }
 
 func (rpcRing *RpcRing) JoinRing(args *JoinRingArgs, reply *bool) error {
 	log.Println(rpcRing.Replica.Node.Hostname, "joinRing method called")
-	err := rpcRing.Replica.Join(args.Hostname, args.OverlayPort, args.MulticastPort)
+	err := rpcRing.Replica.Join(args.Hostname, args.OverlayPort, args.MulticastPort, args.DataPort)
 	if err != nil {
 		*reply = false
 	}

@@ -2,12 +2,18 @@ package data
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
+var defaultValue = Value{
+	Timestamp: "Not exists",
+	Val:       "",
+}
+
 type Value struct {
 	Timestamp string
-	Value     string
+	Val       string
 }
 
 type Store struct {
@@ -33,12 +39,13 @@ func (store *Store) Get(key string) Value {
 
 	store.Lock.RLock()
 	defer store.Lock.RUnlock()
-
+	log.Println("DataStore.Get")
 	if ret, ok := store.dataStore[key]; ok {
+		log.Println("found key: ", key, "ret:", ret)
 		return ret
 	}
-
-	return Value{}
+	log.Println("DataStore.Get: key not found", store.dataStore[key])
+	return defaultValue
 }
 
 func (store *Store) Del(key string) Value {
@@ -49,10 +56,12 @@ func (store *Store) Del(key string) Value {
 		return ret
 	}
 
-	return Value{
-		Timestamp: ""}
+	return GetDefaultValue()
 }
 
 func (store *Store) GetMap() map[string]Value {
 	return store.dataStore
+}
+func GetDefaultValue() Value {
+	return defaultValue
 }

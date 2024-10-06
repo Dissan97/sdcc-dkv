@@ -10,6 +10,7 @@ services:
       --hostname=Rome_Center-Server
       --nto_contact=New_York_TimeSquare-Server:9000:10000,Madrid_PlazaMajor-Server:9000:10000,FrankFurt_Volsvagen-Server:9000:10000,Tokyo_Shibuya-Server:9000:10000
       --simulate_latency=1
+      --mode=Causal
     ports:
       - "10000:10000"
       - "8080:8080"
@@ -25,6 +26,7 @@ services:
       --hostname=New_York_TimeSquare-Server
       --nto_contact=Rome_Center-Server:9000:10000,Madrid_PlazaMajor-Server:9000:10000,FrankFurt_Volsvagen-Server:9000:10000,Tokyo_Shibuya-Server:9000:10000
       --simulate_latency=64
+      --mode=Causal
     ports:
       - "10001:10000"
       - "8081:8080"
@@ -40,6 +42,7 @@ services:
       --hostname=Madrid_PlazaMajor-Server
       --nto_contact=Rome_Center-Server:9000:10000,New_York_TimeSquare-Server:9000:10000,FrankFurt_Volsvagen-Server:9000:10000,Tokyo_Shibuya-Server:9000:10000
       --simulate_latency=12
+      --mode=Causal
     ports:
       - "10002:10000"
       - "8082:8080"
@@ -55,6 +58,7 @@ services:
       --hostname=FrankFurt_Volsvagen-Server
       --nto_contact=Rome_Center-Server:9000:10000,New_York_TimeSquare-Server:9000:10000,Madrid_PlazaMajor-Server:9000:10000,Tokyo_Shibuya-Server:9000:10000
       --simulate_latency=8
+      --mode=Causal
     ports:
       - "10003:10000"
       - "8083:8080"
@@ -70,6 +74,7 @@ services:
       --hostname=Tokyo_Shibuya-Server
       --nto_contact=Rome_Center-Server:9000:10000,New_York_TimeSquare-Server:9000:10000,Madrid_PlazaMajor-Server:9000:10000,FrankFurt_Volsvagen-Server:9000:10000
       --simulate_latency=90
+      --mode=Causal
     ports:
       - "10004:10000"
       - "8084:8080"
