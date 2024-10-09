@@ -94,6 +94,8 @@ func (rpcMulticast *RpcSequentialMulticast) Multicast(args *MessageUpdate, reply
 		Operation:   operation,
 	}
 
+	log.Println("message to deliver for multicast", msg)
+
 	// Multicast the message to all selected nodes
 	var wg sync.WaitGroup
 	wg.Add(len(msg.Nodes))
@@ -134,6 +136,7 @@ func (rpcMulticast *RpcSequentialMulticast) Multicast(args *MessageUpdate, reply
 	}
 
 	wg.Wait()
+	log.Printf("Multicast: All receive call are done...")
 	if atomic.LoadInt32(&allSuccess) != 0 {
 		log.Printf("[#%d]: Multicast request failed for one or more nodes", counter)
 		*reply = false
@@ -166,42 +169,50 @@ func (rpcMulticast *RpcSequentialMulticast) Receive(args *MessageMulticast, repl
 		Message: args,
 		Sender:  ackSender,
 	}
-
+	successSendAck := int32(0)
+	wg := &sync.WaitGroup{}
+	wg.Add(len(args.Nodes))
 	for guid := range args.Nodes {
-		err := rpcMulticast.sendAck(guid, ackArgs)
-		if err != nil {
-			log.Printf("[#%d]: Failed to send acknowledgment to node %s", counter, guid)
-			rpcMulticast.Queue.ForceRemove(args)
-			*reply = false
-			return nil
-		}
+		go func(guid string, ackArgs *MessageAck) {
+			defer wg.Done()
+			err := rpcMulticast.sendAck(guid, ackArgs)
+			if err != nil {
+				log.Printf("[#%d]: Failed to send acknowledgment to node %s", counter, guid)
+				rpcMulticast.Queue.RemoveMessage(args)
+				atomic.AddInt32(&successSendAck, -1)
+			}
+		}(guid, ackArgs)
 	}
-
+	wg.Wait()
+	if atomic.LoadInt32(&successSendAck) != 0 {
+		log.Printf("[#%d]: Receive some ackknowledgement was not sent", counter)
+		rpcMulticast.Queue.RemoveMessage(args)
+		*reply = false
+		return nil
+	}
 	// Check if the message is deliverable
 	for i := 0; i < rpcMulticast.CurrentReplica.RetryDial; i++ {
 		targetMessage, deliverable := rpcMulticast.Queue.GetMaxPriorityMessage()
 		if rpcMulticast.Queue.getKey(targetMessage) == rpcMulticast.Queue.getKey(args) && deliverable {
 			log.Printf("[#%d]: All acknowledgments received, message is deliverable", counter)
-			deliver := rpcMulticast.Queue.Dequeue()
+			rpcMulticast.Queue.RemoveMessage(targetMessage)
 			log.Printf("[#%d]: Dequeued message with key: %s ready to deliver", counter, args.Key)
 			*reply = false
 			if args.Operation == "put" {
 				rpcMulticast.CurrentReplica.DataStore.Put(
-					deliver.Key,
+					targetMessage.Key,
 					data.Value{
-						Timestamp: fmt.Sprintf("%d", deliver.Timestamp),
-						Val:       deliver.Value,
+						Timestamp: fmt.Sprintf("%d", targetMessage.Timestamp),
+						Val:       targetMessage.Value,
 					})
 
 				*reply = true
 			} else if args.Operation == "delete" || args.Operation == "del" {
-				ret := rpcMulticast.CurrentReplica.DataStore.Del(deliver.Key)
+				ret := rpcMulticast.CurrentReplica.DataStore.Del(targetMessage.Key)
 				if ret.Timestamp != data.GetDefaultValue().Timestamp && ret.Val != data.GetDefaultValue().Val {
 					*reply = true
 				}
 			}
-			log.Printf("check delivered for operation=%s {key=%s, value=%s}", args.Operation, deliver.Key,
-				rpcMulticast.CurrentReplica.DataStore.Get(deliver.Key))
 
 			return nil
 		}
@@ -210,7 +221,7 @@ func (rpcMulticast *RpcSequentialMulticast) Receive(args *MessageMulticast, repl
 
 	// If delivery is not possible after retries
 	log.Printf("[#%d]: Acknowledgments missing, message not deliverable", counter)
-	rpcMulticast.Queue.ForceRemove(args)
+	rpcMulticast.Queue.RemoveMessage(args)
 	*reply = false
 	return nil
 }
@@ -218,7 +229,6 @@ func (rpcMulticast *RpcSequentialMulticast) Receive(args *MessageMulticast, repl
 // sendAck Send acknowledgment to the specified node
 func (rpcMulticast *RpcSequentialMulticast) sendAck(guid string, ackArgs *MessageAck) error {
 	curr := rpcMulticast.CurrentReplica
-	rpcMulticast.timeSend()
 	curr.Lock.RLock()
 	defer curr.Lock.RUnlock()
 
@@ -253,7 +263,6 @@ func (rpcMulticast *RpcSequentialMulticast) ReceiveAck(args *MessageAck, reply *
 	counter := atomic.AddUint64(&rpcMulticast.globalCounterReceive, 1)
 	log.Printf("[#%d]: Received acknowledgment for message key: %s", counter, args.Message.Key)
 
-	rpcMulticast.timeReceive(args.Message.Timestamp)
 	rpcMulticast.Queue.ManageAckForTheQueue(args)
 	*reply = true
 	return nil

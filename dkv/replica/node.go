@@ -34,22 +34,23 @@ func (vn *VNode) Init(hostname, guid, overlayPort, multicastPort, dataPort strin
 }
 
 type Replica struct {
-	Node          *VNode
-	Replicas      map[string]*VNode
-	CurrentIndex  int
-	SortedKeys    []string
-	Lock          sync.RWMutex
-	DataStore     *data.Store
-	HashFunc      func() hash.Hash
-	HashBit       int
-	RetryDial     int
-	RetryWait     time.Duration
-	Latency       time.Duration
-	OperationMode string
+	Node             *VNode
+	Replicas         map[string]*VNode
+	CurrentIndex     int
+	SortedKeys       []string
+	Lock             sync.RWMutex
+	DataStore        *data.Store
+	HashFunc         func() hash.Hash
+	HashBit          int
+	RetryDial        int
+	RetryWait        time.Duration
+	Latency          time.Duration
+	MulticastTimeout time.Duration
+	OperationMode    string
 }
 
 func (rep *Replica) Init(hostname, multicastPort, overlayPort, dataPort, hashFunc string, latency, retryDial,
-	retryWait int, opMode string) {
+	retryWait, multicastTimeout int, opMode string) {
 
 	var hf func() hash.Hash
 	if hashFunc == "md5" {
@@ -78,6 +79,7 @@ func (rep *Replica) Init(hostname, multicastPort, overlayPort, dataPort, hashFun
 	rep.RetryDial = retryDial
 	rep.RetryWait = time.Duration(retryWait) * time.Millisecond
 	rep.Latency = time.Duration(latency) * time.Millisecond
+	rep.MulticastTimeout = time.Duration(multicastTimeout) * time.Second
 	rep.OperationMode = opMode
 	rep.Replicas[node.Guid] = node
 
@@ -169,6 +171,7 @@ func (rep *Replica) LookupNode(key string) (*VNode, int) {
 	index := sort.Search(len(rep.SortedKeys), func(i int) bool {
 		return rep.SortedKeys[i] >= key
 	})
+
 	if index == len(rep.SortedKeys) {
 		index = 0
 	}
@@ -185,12 +188,13 @@ func (rep *Replica) GetReplicas() map[string]*VNode {
 // DialWithRetries Utility function for dialing with retries
 func (rep *Replica) DialWithRetries(host string) (*rpc.Client, error) {
 	var err error
-	var client *rpc.Client
+	var client *rpc.Client = nil
 	for i := 0; i < rep.RetryDial; i++ {
 		client, err = rpc.Dial("tcp", host)
 		if err != nil {
+			client = nil
 			log.Printf("Retry dialing node %s after failure", host)
-			time.Sleep(rep.RetryWait)
+			time.Sleep(time.Duration(i+1) * rep.RetryWait)
 			continue
 		}
 		break

@@ -9,7 +9,7 @@ import (
 )
 
 // PerformPut sends a PUT request to the specified server with key and value.
-func PerformPut(server string, key string, value string) error {
+func PerformPut(server string, key string, value string) (string, error) {
 	url := fmt.Sprintf("http://%s/api/datastore", server)
 
 	// Prepare the data to send as JSON
@@ -17,7 +17,7 @@ func PerformPut(server string, key string, value string) error {
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		log.Printf("Error creating PUT request: %v", err)
-		return err
+		return "error", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -25,7 +25,7 @@ func PerformPut(server string, key string, value string) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error performing PUT request: %v", err)
-		return err
+		return "error", err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -38,21 +38,18 @@ func PerformPut(server string, key string, value string) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error reading PUT response: %v", err)
-		return err
+		return "error", err
 	}
-
-	fmt.Println("Response from server:", string(body))
-	return nil
+	return string(body), nil
 }
 
 // PerformGet sends a GET request to retrieve the value for the specified key.
-func PerformGet(server string, key string) error {
+func PerformGet(server string, key string) (string, error) {
 	url := fmt.Sprintf("http://%s/api/datastore?key=%s", server, key)
-
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf("Error performing GET request: %v", err)
-		return err
+		return "error", err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -65,28 +62,26 @@ func PerformGet(server string, key string) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error reading GET response: %v", err)
-		return err
+		return "error", err
 	}
 
-	fmt.Println("Response from server:", string(body))
-	return nil
+	return string(body), nil
 }
 
 // PerformDelete sends a DELETE request to remove the specified key.
-func PerformDelete(server string, key string) error {
+func PerformDelete(server string, key string) (string, error) {
 	url := fmt.Sprintf("http://%s/api/datastore?key=%s", server, key)
-
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		log.Printf("Error creating DELETE request: %v", err)
-		return err
+		return "error", err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error performing DELETE request: %v", err)
-		return err
+		return "error", err
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -99,9 +94,8 @@ func PerformDelete(server string, key string) error {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error reading DELETE response: %v", err)
-		return err
+		return "error", err
 	}
 
-	fmt.Println("Response from server:", string(body))
-	return nil
+	return string(body), nil
 }

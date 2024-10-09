@@ -70,7 +70,7 @@ func (handler *Handler) forwardGet(key, retMessage string) (string, bool) {
 
 	// Get the index for the key and determine which nodes to contact
 	nodeSize := len(curr.SortedKeys)
-	nodesToContact := make([]string, nodeSize)
+	nodesToContact := make([]string, nodeSize-1)
 	_, index := curr.LookupNode(key)
 
 	for i := 0; i < nodeSize; i++ {

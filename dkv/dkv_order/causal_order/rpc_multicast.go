@@ -5,6 +5,7 @@ import (
 	"log"
 	"sdcc_dkv/data"
 	"sdcc_dkv/replica"
+	"sdcc_dkv/utils"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -57,7 +58,7 @@ func (rpcMulticast *RpcCausalMulticast) Init(replica *replica.Replica) {
 func (rpcMulticast *RpcCausalMulticast) Multicast(args *MessageUpdate, reply *bool) error {
 
 	rpcMulticast.CurrentReplica.SimulateLatency()
-
+	log.Printf("requested multicast for key=%s", args.Key)
 	operation := strings.ToLower(args.Operation)
 	if operation == "del" || operation == "delete" || operation == "put" {
 		defer rpcMulticast.logOperation(args, reply)
@@ -89,11 +90,12 @@ func (rpcMulticast *RpcCausalMulticast) Multicast(args *MessageUpdate, reply *bo
 
 		go func(wg *sync.WaitGroup, guid string, allSuccess *int32) {
 			defer wg.Done()
-			rpcMulticast.CurrentReplica.Lock.Lock()
-			defer rpcMulticast.CurrentReplica.Lock.Unlock()
+			rpcMulticast.CurrentReplica.Lock.RLock()
+			defer rpcMulticast.CurrentReplica.Lock.RUnlock()
 			log.Printf("Sending multicast request to targetNode %s", guid)
 			client, err := rpcMulticast.CurrentReplica.DialWithRetries(curr.Replicas[guid].Hostname +
 				":" + curr.Node.MulticastPort)
+			defer utils.CloseClient(client)
 			if err != nil {
 				log.Printf("Multicast request to targetNode %s failed with error: %s",
 					curr.Node.Guid, err.Error())
@@ -103,16 +105,16 @@ func (rpcMulticast *RpcCausalMulticast) Multicast(args *MessageUpdate, reply *bo
 			var reply bool
 			err = client.Call("RpcCausalMulticast.Receive", msg, &reply)
 			if err != nil {
-				log.Printf("Call to RpcSequentialMulticast.Receive failed for targetNode %s: %s", guid, err.Error())
+				log.Printf("Call to RpcCausalMulticast.Receive failed for targetNode %s: %s", guid, err.Error())
 				atomic.StoreInt32(allSuccess, -1)
 				return
 			}
-
-			err = client.Close()
-			if err != nil {
-				log.Printf("Error closing RPC client for targetNode %s: %s", guid, err.Error())
+			if !reply {
+				atomic.AddInt32(allSuccess, -1)
+				log.Printf("Multicast request to targetNode %s replied %v", guid, reply)
 				return
 			}
+
 			log.Printf("Multicast request to targetNode %s succeeded", guid)
 		}(&wg, k, &allSuccess)
 
@@ -161,8 +163,10 @@ func (rpcMulticast *RpcCausalMulticast) Receive(args *MessageCausalMulticast, re
 		if rpcMulticast.Queue.IsCausallyReady(args) {
 			rpcMulticast.timeReceive(args)
 			*reply = rpcMulticast.deliverOperation(args)
+			rpcMulticast.Queue.Dequeue(args)
+			return nil
 		}
-		time.Sleep(rpcMulticast.CurrentReplica.RetryWait)
+		time.Sleep(time.Duration(i+1) * rpcMulticast.CurrentReplica.RetryWait)
 	}
 	rpcMulticast.Queue.Dequeue(args)
 	*reply = false
@@ -180,27 +184,21 @@ func (rpcMulticast *RpcCausalMulticast) timeSend() map[string]uint64 {
 			ret[k]++
 		}
 	}
+	log.Printf("msg vector clock: %v", ret)
 	return ret
+}
+func (rpcMulticast *RpcCausalMulticast) timeReceive(msg *MessageCausalMulticast) {
+	rpcMulticast.TimeLock.Lock()
+	defer rpcMulticast.TimeLock.Unlock()
+	for k := range rpcMulticast.VectorClock {
+		actual := rpcMulticast.VectorClock[k]
+		rpcMulticast.VectorClock[k] = max(actual, msg.VectorClock[k])
+	}
+	log.Printf("timeReceive: my actual vector clock: %v\n", rpcMulticast.VectorClock)
 }
 
 func (rpcMulticast *RpcCausalMulticast) getVectorString() string {
 	return fmt.Sprint(rpcMulticast.VectorClock[rpcMulticast.CurrentReplica.Node.Guid])
-}
-
-func (rpcMulticast *RpcCausalMulticast) timeReceive(msg *MessageCausalMulticast) {
-	rpcMulticast.TimeLock.Lock()
-	defer rpcMulticast.TimeLock.Unlock()
-	ret := "["
-	index := 0
-	for index = 0; index < len(rpcMulticast.CurrentReplica.SortedKeys)-1; index++ {
-		guid := rpcMulticast.CurrentReplica.SortedKeys[index]
-		maxVal := max(rpcMulticast.VectorClock[guid], msg.VectorClock[guid])
-		rpcMulticast.VectorClock[guid] = maxVal
-		ret += fmt.Sprintf("{guid:%s, clk:%d}, ", guid, rpcMulticast.VectorClock[guid])
-	}
-	guid := rpcMulticast.CurrentReplica.SortedKeys[index]
-	ret += fmt.Sprintf("{guid:%s, clk:%d}]", guid, rpcMulticast.VectorClock[guid])
-
 }
 
 func (rpcMulticast *RpcCausalMulticast) getTimestampFromVc(vc map[string]uint64) string {

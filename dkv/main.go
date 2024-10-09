@@ -25,9 +25,10 @@ func main() {
 	opMode := flag.String("mode", utils.Sequential, "the operation mode")
 	hashFunction := flag.String("hash", "md5", "the hash function")
 	nodesToContact := flag.String("nto_contact", "localhost:9000", "nodes to contact to form the network")
-	retryDial := flag.Int("r_dial", 20, "the number of times to retry dial")
+	retryDial := flag.Int("r_dial", 30, "the number of times to retry dial")
 	retryWait := flag.Int("r_wait", 50, "how many milliseconds to wait between retry dial")
 	simulateLatency := flag.Int("simulate_latency", 0, "simulating network latency")
+	multicastTimeout := flag.Int("m_timeout", 8, "max timeout for multicast")
 	flag.Parse()
 
 	// Log server properties
@@ -37,13 +38,17 @@ func main() {
 		"overlay port=%s\n"+
 		"operation mode=%s\n"+
 		"data port=%s\n"+
-		"nodes to contact=[%s]\n", *hostname, *multicastPort, *overlayPort, *opMode,
-		*dataPort, *nodesToContact)
+		"nodes to contact=[%s]\n"+
+		"max dial retry=%d\n"+
+		"retry wait=%d in milliseconds"+
+		"node simulation of latency=%d in milliseconds\n"+
+		"multicast timeout=%d in seconds", *hostname, *multicastPort, *overlayPort, *opMode,
+		*dataPort, *nodesToContact, *retryDial, *retryWait, *simulateLatency, *multicastTimeout)
 
 	// Initialize new replica and log initialization
 	newReplica := new(replica.Replica)
 	newReplica.Init(*hostname, *multicastPort, *overlayPort, *dataPort, *hashFunction,
-		*simulateLatency, *retryDial, *retryWait, *opMode)
+		*simulateLatency, *retryDial, *retryWait, *multicastTimeout, *opMode)
 
 	newReplica.Info()
 
@@ -88,14 +93,7 @@ func startRing(newReplica *replica.Replica, contacts string, readyChan chan bool
 			var err error
 			var client *rpc.Client
 			// Retry connection to the node
-			for j := 0; j < 3; j++ {
-				client, err = rpc.Dial("tcp", host[0]+":"+host[1])
-				if err != nil {
-					time.Sleep(1 * time.Second)
-					continue
-				}
-				break // Connection successful, exit loop
-			}
+			client, err = newReplica.DialWithRetries(host[0] + ":" + host[1])
 			if err != nil {
 				log.Fatal("Dial error: cannot contacts the client after 3 retries", err)
 			}
@@ -125,7 +123,7 @@ func startRing(newReplica *replica.Replica, contacts string, readyChan chan bool
 		wg.Wait() // Wait for all join operations to complete
 		for {     // ensure that all nodes has joined the network
 			newReplica.Lock.RLock()
-			if len(newReplica.Replicas) == (len(others) + 1) {
+			if len(newReplica.Replicas) >= (len(others) + 1) {
 				readyChan <- true
 				newReplica.Lock.RUnlock()
 				return
