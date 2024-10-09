@@ -39,10 +39,9 @@ func (mq *MulticastQueue) IsCausallyReady(theMessage *MessageCausalMulticast) bo
 		msg := mq.Queue[i]
 		if msg.Key == theMessage.Key && msg.Value == theMessage.Value {
 
-			mq.TimeLock.RLock()
 			firstCheck := false
 			secondCheck := true
-
+			mq.TimeLock.RLock()
 			firstCheck = msg.VectorClock[msg.Guid] == (mq.ExpectedClock[msg.Guid] + 1)
 			for k, v := range mq.ExpectedClock {
 				if k != msg.Guid {
@@ -52,14 +51,13 @@ func (mq *MulticastQueue) IsCausallyReady(theMessage *MessageCausalMulticast) bo
 					}
 				}
 			}
-
+			mq.TimeLock.RUnlock()
 			if firstCheck && secondCheck {
 				log.Printf("key=%s meet criteria for causally orderd", theMessage.Key)
-				mq.Queue = append(mq.Queue[:i], mq.Queue[i+1:]...) // Remove the element
-				mq.TimeLock.RUnlock()
+				mq.Queue = append(mq.Queue[:i], mq.Queue[i+1:]...)
 				return true
 			}
-			mq.TimeLock.RUnlock()
+
 		}
 	}
 
@@ -69,10 +67,8 @@ func (mq *MulticastQueue) IsCausallyReady(theMessage *MessageCausalMulticast) bo
 // Enqueue a message into the multicast queue
 func (mq *MulticastQueue) Enqueue(msg *MessageCausalMulticast) {
 	mq.Lock.Lock()
-	defer mq.Lock.Unlock()
-
 	mq.Queue = append(mq.Queue, msg)
-
+	mq.Lock.Unlock()
 	log.Println("Message queued key=", msg.Key, "vector clock=", msg.VectorClock)
 }
 
@@ -83,6 +79,7 @@ func (mq *MulticastQueue) Dequeue(msg *MessageCausalMulticast) {
 	for i := 0; i < len(mq.Queue); i++ {
 		if mq.Queue[i].Key == msg.Key && mq.Queue[i].Value == msg.Value {
 			mq.Queue = append(mq.Queue[:i], mq.Queue[i+1:]...)
+			return
 		}
 	}
 }

@@ -148,8 +148,8 @@ func (mq *MulticastQueue) GetMaxPriorityMessage() (*MessageMulticast, bool) {
 	return mq.Queue[0], mq.Queue[0].Deliverable
 }
 
-// ForceRemove removes a message from the queue based on the message key.
-func (mq *MulticastQueue) ForceRemove(args *MessageMulticast) {
+// RemoveMessage removes a message from the queue based on the message key.
+func (mq *MulticastQueue) RemoveMessage(args *MessageMulticast) {
 	mq.Lock.Lock()
 	defer mq.Lock.Unlock()
 
