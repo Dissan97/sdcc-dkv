@@ -1,7 +1,7 @@
 package causal_order
 
 import (
-	"log"
+	"fmt"
 	"sync"
 )
 
@@ -9,77 +9,66 @@ type MessageCausalMulticast struct {
 	Key         string
 	Value       string
 	VectorClock map[string]uint64
-	Guid        string
-	Deliverable bool
+	SenderGuid  string
 	Operation   string
 }
 
 type MulticastQueue struct {
-	Queue         []*MessageCausalMulticast
-	ExpectedClock map[string]uint64
-	TimeLock      *sync.RWMutex
-	Lock          sync.RWMutex
+	Queue map[string]*MessageCausalMulticast
+	Lock  sync.RWMutex
 }
 
-// Init Initialize the multicast queue
-func (mq *MulticastQueue) Init(vc map[string]uint64, vcLock *sync.RWMutex) {
-	mq.Queue = make([]*MessageCausalMulticast, 0)
-	mq.ExpectedClock = vc
-	mq.TimeLock = vcLock
-	log.Println("MulticastQueue initialized with replica GUIDs:", vc)
+func (msg *MessageCausalMulticast) GetKey() string {
+	return fmt.Sprintf("%s:%v", msg.Key, msg.VectorClock)
 }
 
-// IsCausallyReady Check if the message is causally ready for delivery by comparing vector clocks
-func (mq *MulticastQueue) IsCausallyReady(theMessage *MessageCausalMulticast) bool {
+func (mq *MulticastQueue) Init() {
+	mq.Queue = make(map[string]*MessageCausalMulticast)
+}
+
+func (mq *MulticastQueue) AddMessage(message *MessageCausalMulticast) {
+	key := message.GetKey()
 	mq.Lock.Lock()
 	defer mq.Lock.Unlock()
-
-	// Using a standard for loop to get the index
-	for i := 0; i < len(mq.Queue); i++ {
-		msg := mq.Queue[i]
-		if msg.Key == theMessage.Key && msg.Value == theMessage.Value {
-
-			firstCheck := false
-			secondCheck := true
-			mq.TimeLock.RLock()
-			firstCheck = msg.VectorClock[msg.Guid] == (mq.ExpectedClock[msg.Guid] + 1)
-			for k, v := range mq.ExpectedClock {
-				if k != msg.Guid {
-					if msg.VectorClock[k] > v {
-						secondCheck = false
-						break
-					}
-				}
-			}
-			mq.TimeLock.RUnlock()
-			if firstCheck && secondCheck {
-				log.Printf("key=%s meet criteria for causally orderd", theMessage.Key)
-				mq.Queue = append(mq.Queue[:i], mq.Queue[i+1:]...)
-				return true
-			}
-
-		}
-	}
-
-	return false
+	mq.Queue[key] = message
 }
 
-// Enqueue a message into the multicast queue
-func (mq *MulticastQueue) Enqueue(msg *MessageCausalMulticast) {
-	mq.Lock.Lock()
-	mq.Queue = append(mq.Queue, msg)
-	mq.Lock.Unlock()
-	log.Println("Message queued key=", msg.Key, "vector clock=", msg.VectorClock)
-}
-
-func (mq *MulticastQueue) Dequeue(msg *MessageCausalMulticast) {
+func (mq *MulticastQueue) RemoveMessage(message *MessageCausalMulticast) {
+	key := message.GetKey()
 	mq.Lock.Lock()
 	defer mq.Lock.Unlock()
+	delete(mq.Queue, key)
+}
 
-	for i := 0; i < len(mq.Queue); i++ {
-		if mq.Queue[i].Key == msg.Key && mq.Queue[i].Value == msg.Value {
-			mq.Queue = append(mq.Queue[:i], mq.Queue[i+1:]...)
-			return
+func (mq *MulticastQueue) CheckDeliverable(key string, Vc map[string]uint64,
+	lock *sync.RWMutex) (bool, error) {
+
+	mq.Lock.RLock()
+	msg, ok := mq.Queue[key]
+	mq.Lock.RUnlock()
+	if !ok {
+		return false, fmt.Errorf("message not exist")
+	}
+	return IsCausallyReady(msg, Vc, lock), nil
+
+}
+
+func IsCausallyReady(msg *MessageCausalMulticast, Vc map[string]uint64,
+	lock *sync.RWMutex) bool {
+	senderGuid := msg.SenderGuid
+	lock.RLock()
+	defer lock.RUnlock()
+
+	if msg.VectorClock[senderGuid] != Vc[senderGuid]+1 {
+		return false
+	}
+
+	for k, v := range Vc {
+		if k != senderGuid {
+			if msg.VectorClock[k] > v {
+				return false
+			}
 		}
 	}
+	return true
 }

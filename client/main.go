@@ -12,6 +12,7 @@ func main() {
 	servers := flag.String("servers", "localhost:8080;localhost:8081;localhost:8082", "server addresses")
 	mode := flag.String("mode", "normal", "client mode")
 	filename := flag.String("t_filename", "resources/docker-compose.yaml", "test file docker-compose.yaml")
+	threads := flag.Int("threads", 100, "number of threads for stress test")
 	flag.Parse()
 
 	if *servers == "" {
@@ -28,9 +29,9 @@ func main() {
 		cli.Run()
 		return
 	}
-	test_env := new(test_dkv.TestEnv)
-	test_env.Init(strings.Split(*servers, ";"), *filename)
-	test_env.TestFunctions()
-	test_env.StressTest()
+	testEnv := new(test_dkv.TestEnv)
+	testEnv.Init(strings.Split(*servers, ";"), *filename, *threads)
+	testEnv.TestFunctions()
+	testEnv.StressTestPut()
 
 }
