@@ -13,6 +13,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,9 +40,10 @@ type TestEnv struct {
 	Servers []string
 	Keys    []string
 	Hash    func() hash.Hash
+	Threads int
 }
 
-func (te *TestEnv) Init(servers []string, filename string) {
+func (te *TestEnv) Init(servers []string, filename string, threads int) {
 	te.Servers = servers
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -75,6 +77,7 @@ func (te *TestEnv) Init(servers []string, filename string) {
 	for networkName, network := range compose.Networks {
 		fmt.Printf("Network: %s, Driver: %s\n", networkName, network.Driver)
 	}
+	te.Threads = threads
 
 }
 
@@ -181,6 +184,34 @@ func (te *TestEnv) TestFunctions() {
 
 }
 
-func (te *TestEnv) StressTest() {
+func (te *TestEnv) StressTestPut() {
+	wg := sync.WaitGroup{}
+	wg.Add(te.Threads)
+	times := make([]float64, te.Threads)
+	mean := float64(0)
+	for i := 0; i < te.Threads; i++ {
+		go func(id int, wg *sync.WaitGroup) {
+			defer wg.Done()
+			times[id] = 0
+			start := float64(time.Now().UnixNano())
 
+			for _, key := range te.Keys {
+				_, err := utils.PerformPut(te.Servers[id%len(te.Servers)], key, fmt.Sprintf("theread_%d", id))
+				if err != nil {
+					log.Printf("error putting key %s in server %s: %v", key,
+						te.Servers[id%len(te.Servers)], err)
+				}
+			}
+
+			end := float64(time.Now().UnixNano())
+			times[id] += (end - start) / math.Pow(10, 9)
+		}(i, &wg)
+	}
+
+	wg.Wait()
+	for _, val := range times {
+		mean += val
+	}
+	mean /= float64(te.Threads)
+	log.Printf("Testing stress test threads %d took %.3f seconds\n", te.Threads, mean)
 }

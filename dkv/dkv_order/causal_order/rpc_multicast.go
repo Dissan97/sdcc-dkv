@@ -8,18 +8,22 @@ import (
 	"sdcc_dkv/utils"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
+type BufferMessage struct {
+	Message *MessageCausalMulticast
+	Counter int
+}
+
 // RpcCausalMulticast Assuming leader process the process which manage the key following ordered node are replicas
 type RpcCausalMulticast struct {
-	Queue                  *MulticastQueue
-	CurrentReplica         *replica.Replica
-	VectorClock            map[string]uint64 // group vectorClocks
-	TimeLock               sync.RWMutex
-	globalCounterMulticast uint64
-	globalCounterReceive   uint64
+	Queue            *MulticastQueue
+	CurrentReplica   *replica.Replica
+	VectorClock      map[string]uint64 // group vectorClocks
+	TimeLock         sync.RWMutex
+	BufferedMessages map[string]*BufferMessage
+	BufferLock       sync.RWMutex
 }
 
 type MessageUpdate struct {
@@ -28,108 +32,119 @@ type MessageUpdate struct {
 	Operation string
 }
 
-type MessageAck struct {
-	Message *MessageCausalMulticast
-	Sender  string
-}
-
 func (rpcMulticast *RpcCausalMulticast) Init(replica *replica.Replica) {
 	rpcMulticast.CurrentReplica = replica
 	rpcMulticast.CurrentReplica.Lock.RLock()
 	defer rpcMulticast.CurrentReplica.Lock.RUnlock()
-	rpcMulticast.globalCounterMulticast = 0
-	rpcMulticast.globalCounterReceive = 0
 
 	// Initialize vector clock for each replica
 	rpcMulticast.VectorClock = make(map[string]uint64)
-	log.Printf("Start init vector clock\n")
-	logMessage := "Vector clock: "
-	for _, guid := range replica.SortedKeys {
-		rpcMulticast.VectorClock[guid] = 0
-		logMessage += fmt.Sprintf("{guid:%s, clk:%d}\n", guid, rpcMulticast.VectorClock[guid])
-	}
-	log.Printf("RpcCausalMulticast initialized %s", logMessage)
+	log.Printf("Start init vector clock actual sorted nodes %v\n", replica.SortedKeys)
 
+	for i := 0; i < len(replica.SortedKeys); i++ {
+		guid := replica.SortedKeys[i]
+		rpcMulticast.VectorClock[guid] = 0
+	}
+
+	log.Printf("RpcCausalMulticast initialized vector clock %v", rpcMulticast.VectorClock)
 	rpcMulticast.Queue = new(MulticastQueue)
-	rpcMulticast.Queue.Init(rpcMulticast.VectorClock, &rpcMulticast.TimeLock)
+	rpcMulticast.Queue.Init()
+	rpcMulticast.BufferedMessages = make(map[string]*BufferMessage)
 }
 
 // Multicast receive request from client
 func (rpcMulticast *RpcCausalMulticast) Multicast(args *MessageUpdate, reply *bool) error {
-
 	rpcMulticast.CurrentReplica.SimulateLatency()
-	log.Printf("requested multicast for key=%s", args.Key)
-	operation := strings.ToLower(args.Operation)
-	if operation == "del" || operation == "delete" || operation == "put" {
-		defer rpcMulticast.logOperation(args, reply)
-	} else {
-		log.Printf("Multicast operation not recognized: %s", operation)
-		*reply = false
-		return nil
-	}
-	curr := rpcMulticast.CurrentReplica
+	log.Printf("requested casusal multicast for %v\n", args)
 
-	// now handle the operation
-
+	// update of clock copy of it to avoid concurrency issue
 	vc := rpcMulticast.timeSend()
 
+	// create the message
 	msg := &MessageCausalMulticast{
 		Key:         args.Key,
 		Value:       args.Value,
 		VectorClock: vc,
-		Guid:        curr.Node.Guid,
-		Deliverable: false,
-		Operation:   operation,
+		SenderGuid:  rpcMulticast.CurrentReplica.Node.Guid,
+		Operation:   args.Operation,
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(vc))
-	allSuccess := int32(0)
+	// can deliver the message
+	*reply = rpcMulticast.deliverOperation(msg)
 
-	for k := range vc {
+	if *reply {
+		log.Printf("message delivered %v\n", args)
+		bufferKey := msg.GetKey()
+		// buffering message if there is someone failed
+		rpcMulticast.BufferLock.Lock()
+		rpcMulticast.BufferedMessages[bufferKey] = &BufferMessage{
+			Message: msg,
+			Counter: 0,
+		}
+		rpcMulticast.BufferLock.Unlock()
+		go rpcMulticast.ContactOtherNodes(msg)
+	} else {
+		log.Printf("cannot deliver the message %v\n", args)
+	}
+	return nil
+}
 
-		go func(wg *sync.WaitGroup, guid string, allSuccess *int32) {
-			defer wg.Done()
-			rpcMulticast.CurrentReplica.Lock.RLock()
-			defer rpcMulticast.CurrentReplica.Lock.RUnlock()
-			log.Printf("Sending multicast request to targetNode %s", guid)
-			client, err := rpcMulticast.CurrentReplica.DialWithRetries(curr.Replicas[guid].Hostname +
-				":" + curr.Node.MulticastPort)
-			defer utils.CloseClient(client)
-			if err != nil {
-				log.Printf("Multicast request to targetNode %s failed with error: %s",
-					curr.Node.Guid, err.Error())
-				atomic.AddInt32(allSuccess, -1)
-				return
-			}
-			var reply bool
-			err = client.Call("RpcCausalMulticast.Receive", msg, &reply)
-			if err != nil {
-				log.Printf("Call to RpcCausalMulticast.Receive failed for targetNode %s: %s", guid, err.Error())
-				atomic.StoreInt32(allSuccess, -1)
-				return
-			}
-			if !reply {
-				atomic.AddInt32(allSuccess, -1)
-				log.Printf("Multicast request to targetNode %s replied %v", guid, reply)
-				return
-			}
+func (rpcMulticast *RpcCausalMulticast) ContactOtherNodes(msg *MessageCausalMulticast) {
+	contactSize := len(rpcMulticast.CurrentReplica.SortedKeys) - 1
+	guids := make([]string, contactSize)
+	i := 0
+	key := msg.GetKey()
+	rpcMulticast.CurrentReplica.Lock.RLock()
+	for _, guid := range rpcMulticast.CurrentReplica.SortedKeys {
+		if msg.SenderGuid != guid {
+			guids[i] = guid
+			i++
+		}
+	}
+	rpcMulticast.CurrentReplica.Lock.RUnlock()
 
-			log.Printf("Multicast request to targetNode %s succeeded", guid)
-		}(&wg, k, &allSuccess)
-
+	wg := sync.WaitGroup{}
+	wg.Add(contactSize)
+	for i = 0; i < contactSize; i++ {
+		go rpcMulticast.doCall(msg, key, guids[i], &wg)
 	}
 	wg.Wait()
-	if atomic.LoadInt32(&allSuccess) != 0 {
-		log.Printf("Multicast request failed for one or more nodes")
-		*reply = false
-		return nil
+	rpcMulticast.BufferLock.Lock()
+	if rpcMulticast.BufferedMessages[key].Counter == contactSize {
+		log.Printf("No need for BufferedMessage %v\n", msg)
+		delete(rpcMulticast.BufferedMessages, key)
+	}
+	rpcMulticast.BufferLock.Unlock()
+}
+
+func (rpcMulticast *RpcCausalMulticast) doCall(msg *MessageCausalMulticast, key, guid string, wg *sync.WaitGroup) {
+
+	node := rpcMulticast.CurrentReplica.Replicas[guid]
+	hostname := node.Hostname + ":" + node.MulticastPort
+	client, err := rpcMulticast.CurrentReplica.DialWithRetries(hostname)
+	if err != nil {
+		log.Printf("cannot connect to replica %v\n", err)
+		return
 	}
 
-	log.Printf("Multicast request completed successfully storing "+
-		"{VectorClock: %s, key=%s, value=%s}\n", rpcMulticast.getVectorString(), msg.Key, msg.Value)
-	*reply = false
-	return nil
+	var replay bool
+	err = client.Call("RpcCausalMulticast.Receive", msg, &replay)
+	if err != nil {
+		log.Printf("cannot call receive from replica %v\n", err)
+		utils.CloseClient(client)
+		return
+	}
+	utils.CloseClient(client)
+	if !replay {
+		log.Printf("receive from replica %v\n", replay)
+		rpcMulticast.doCall(msg, key, guid, wg)
+	} else {
+		rpcMulticast.BufferLock.Lock()
+		rpcMulticast.BufferedMessages[key].Counter++
+		rpcMulticast.BufferLock.Unlock()
+		wg.Done()
+	}
+	return
 }
 
 func (rpcMulticast *RpcCausalMulticast) logOperation(args *MessageUpdate, reply *bool) {
@@ -147,53 +162,107 @@ func (rpcMulticast *RpcCausalMulticast) logOperation(args *MessageUpdate, reply 
 
 // Receive function for handling incoming multicast messages
 func (rpcMulticast *RpcCausalMulticast) Receive(args *MessageCausalMulticast, reply *bool) error {
-
-	rpcMulticast.CurrentReplica.SimulateLatency()
-	counter := atomic.AddUint64(&rpcMulticast.globalCounterReceive, 1)
-	log.Printf("[#%d]: Received multicast message for key: %s", counter, args.Key)
-	log.Printf("got message guidGroup=%s which leadername=%s", args.Guid,
-		rpcMulticast.CurrentReplica.Replicas[args.Guid].Hostname)
-	// (1) Enqueue the received message
-	rpcMulticast.Queue.Enqueue(args)
-	log.Printf("[#%d]: Enqueued message with key: %s", counter, args.Key)
-
-	// check deliverable if deliverable deliver message
-	log.Printf("check for causally ordered")
-	for i := 0; i < rpcMulticast.CurrentReplica.RetryDial; i++ {
-		if rpcMulticast.Queue.IsCausallyReady(args) {
-			rpcMulticast.timeReceive(args)
-			*reply = rpcMulticast.deliverOperation(args)
-			rpcMulticast.Queue.Dequeue(args)
-			return nil
-		}
-		time.Sleep(time.Duration(i+1) * rpcMulticast.CurrentReplica.RetryWait)
-	}
-	rpcMulticast.Queue.Dequeue(args)
+	log.Printf("received called for message %v\n", args)
+	// check already causally ready
 	*reply = false
+	if args == nil {
+		log.Printf("args cannot be nil")
+		return nil
+	}
+	if IsCausallyReady(args, rpcMulticast.VectorClock, &rpcMulticast.TimeLock) {
+		log.Printf("message is ready to deliver %v\n", args)
+		*reply = rpcMulticast.deliverOperation(args)
+		if *reply {
+			log.Printf("message delivered %v\n", args)
+			rpcMulticast.timeReceive(args)
+		} else {
+			log.Printf("cannot deliver the message %v\n", args)
+		}
+		return nil
+	}
+
+	// message not ready
+	rpcMulticast.Queue.AddMessage(args)
+	key := args.GetKey()
+
+	var ok bool
+	var err error
+	for i := 0; i < rpcMulticast.CurrentReplica.RetryDial; i++ {
+		log.Printf("[#%d] wating to syncrhonize %v", i, args)
+		if ok, err = rpcMulticast.Queue.CheckDeliverable(key, rpcMulticast.VectorClock, &rpcMulticast.TimeLock); ok {
+			log.Printf("message now is ready to deliver %v\n", args)
+			*reply = rpcMulticast.deliverOperation(args)
+			if *reply {
+				log.Printf("message delivered %v\n", args)
+				rpcMulticast.timeReceive(args)
+			}
+			break
+		}
+
+		if err != nil {
+			log.Printf("not in queue message %s\n", args.GetKey())
+			rpcMulticast.CurrentReplica.Lock.RLock()
+			sender := rpcMulticast.CurrentReplica.Replicas[args.SenderGuid]
+			rpcMulticast.CurrentReplica.Lock.RUnlock()
+			client, err := rpcMulticast.CurrentReplica.DialWithRetries(sender.Hostname + ":" + sender.MulticastPort)
+			if err != nil {
+				log.Printf("cannot connect to replica %v\n", err)
+				*reply = false
+				return nil
+			}
+			var ret MessageCausalMulticast
+			err = client.Call("RpcCausalMulticast.PullMessage", args.GetKey(), &ret)
+			if err != nil {
+				log.Printf("cannot pull message from replica %v\n", err)
+				*reply = false
+				utils.CloseClient(client)
+				return nil
+			}
+			utils.CloseClient(client)
+			args = &ret
+			rpcMulticast.Queue.AddMessage(args)
+			continue
+		}
+
+		time.Sleep(time.Duration(i<<1) * rpcMulticast.CurrentReplica.RetryWait)
+	}
+	rpcMulticast.Queue.RemoveMessage(args)
+	return nil
+}
+
+func (rpcMulticast *RpcCausalMulticast) PullMessage(args *string, reply *MessageCausalMulticast) error {
+	log.Printf("pulling message %v\n", args)
+	rpcMulticast.BufferLock.RLock()
+	defer rpcMulticast.BufferLock.RUnlock()
+
+	msg, ok := rpcMulticast.BufferedMessages[*args]
+	if !ok {
+		reply = nil
+	}
+	reply = msg.Message
+
 	return nil
 }
 
 func (rpcMulticast *RpcCausalMulticast) timeSend() map[string]uint64 {
-	rpcMulticast.TimeLock.RLock()
-	defer rpcMulticast.TimeLock.RUnlock()
-
+	rpcMulticast.TimeLock.Lock()
+	defer rpcMulticast.TimeLock.Unlock()
 	ret := make(map[string]uint64)
-	for k, v := range rpcMulticast.VectorClock {
-		ret[k] = v
+	for k := range rpcMulticast.VectorClock {
 		if k == rpcMulticast.CurrentReplica.Node.Guid {
-			ret[k]++
+			rpcMulticast.VectorClock[k]++
 		}
+		ret[k] = rpcMulticast.VectorClock[k]
 	}
-	log.Printf("msg vector clock: %v", ret)
 	return ret
 }
 func (rpcMulticast *RpcCausalMulticast) timeReceive(msg *MessageCausalMulticast) {
 	rpcMulticast.TimeLock.Lock()
 	defer rpcMulticast.TimeLock.Unlock()
-	for k := range rpcMulticast.VectorClock {
-		actual := rpcMulticast.VectorClock[k]
-		rpcMulticast.VectorClock[k] = max(actual, msg.VectorClock[k])
+	for k := range msg.VectorClock {
+		rpcMulticast.VectorClock[k] = max(rpcMulticast.VectorClock[k], msg.VectorClock[k])
 	}
+
 	log.Printf("timeReceive: my actual vector clock: %v\n", rpcMulticast.VectorClock)
 }
 
@@ -216,7 +285,6 @@ func (rpcMulticast *RpcCausalMulticast) getTimestampFromVc(vc map[string]uint64)
 
 func (rpcMulticast *RpcCausalMulticast) deliverOperation(args *MessageCausalMulticast) bool {
 	timestamp := rpcMulticast.getTimestampFromVc(args.VectorClock)
-	log.Printf("request deliver operation for key=%s and timestamp=%s\n", args.Key, timestamp)
 
 	if args.Operation == "put" {
 		rpcMulticast.CurrentReplica.DataStore.Put(
