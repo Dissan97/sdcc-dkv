@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/rpc"
-	"sdcc_dkv/data"
 	"sdcc_dkv/dkv_order/totally_order"
 	"sdcc_dkv/replica"
 	"sdcc_dkv/utils"
@@ -65,55 +64,6 @@ func (handler *Handler) jsonResponse(w http.ResponseWriter, status int, message 
 	}
 }
 
-func (handler *Handler) forwardGet(key, retMessage string) (string, bool) {
-	curr := handler.rep
-
-	// Get the index for the key and determine which nodes to contact
-	nodeSize := len(curr.SortedKeys)
-	nodesToContact := make([]string, nodeSize-1)
-	_, index := curr.LookupNode(key)
-
-	for i := 0; i < nodeSize; i++ {
-
-		node := curr.Replicas[curr.SortedKeys[(index+i)%len(curr.SortedKeys)]]
-		if curr.Node.Guid != node.Guid {
-			nodesToContact[i] = node.Hostname + ":" + node.MulticastPort
-		}
-	}
-
-	// Iterate through the nodes and send the GET request to each node
-	for _, node := range nodesToContact {
-
-		client, err := handler.rep.DialWithRetries(node)
-		if err != nil {
-			log.Printf("error connecting to node %s: %s\n", node, err)
-			continue
-		}
-		var resultGet data.Value
-		serviceMethod := fmt.Sprintf("Rpc%sMulticast.GetRequestByNodes", curr.OperationMode)
-		err = client.Call(serviceMethod, &key, &resultGet)
-		if err != nil {
-			log.Printf("error calling rpc %s on node %s error: %s\n", serviceMethod, node, err)
-			continue
-		}
-
-		err = client.Close()
-		if err != nil {
-			log.Printf("error closing rpc %s on node %s error: %s\n", serviceMethod, node, err)
-		}
-
-		if resultGet.Timestamp != data.GetDefaultValue().Timestamp && resultGet.Val != data.GetDefaultValue().Val {
-			log.Printf("forwarder found on node %s with key: %s {timestamp=%s, value=%s}\n", key, node,
-				resultGet.Timestamp, resultGet.Val)
-			retMessage = fmt.Sprintf("{timestamp: %s, value:%s}", resultGet.Timestamp, resultGet.Val)
-			return retMessage, true
-		}
-
-	}
-
-	return retMessage, false
-}
-
 func (handler *Handler) GetRequest(w http.ResponseWriter, r *http.Request) {
 	handler.rep.SimulateLatency()
 	status := http.StatusNotFound
@@ -134,15 +84,10 @@ func (handler *Handler) GetRequest(w http.ResponseWriter, r *http.Request) {
 	ret := handler.rep.DataStore.Get(key)
 	responseMessage := fmt.Sprintf("{timestamp: %s, value:%s}", ret.Timestamp, ret.Val)
 	log.Printf("GET response for key: %s on my storage %s", key, responseMessage)
-	if ret.Timestamp == "Not exists" && ret.Val == "" {
-		var exists bool
-		if responseMessage, exists = handler.forwardGet(key, responseMessage); exists {
-			log.Printf("GET request for key %s returned a value for %s", key, responseMessage)
-			status = http.StatusOK
-		}
-	} else {
+	if ret.Timestamp != "Not exists" && ret.Val != "" {
 		status = http.StatusOK
 	}
+
 	log.Printf("return this to client: %s", responseMessage)
 	handler.jsonResponse(w, status, responseMessage)
 }
