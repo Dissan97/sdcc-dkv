@@ -13,7 +13,6 @@ services:
       --mode=Causal
       --hash=md5
     ports:
-      - "10000:10000"
       - "8080:8080"
     networks:
       - dvk-net
@@ -30,7 +29,6 @@ services:
       --mode=Causal
       --hash=md5
     ports:
-      - "10001:10000"
       - "8081:8080"
     networks:
       - dvk-net
@@ -47,7 +45,6 @@ services:
       --mode=Causal
       --hash=md5
     ports:
-      - "10002:10000"
       - "8082:8080"
     networks:
       - dvk-net
@@ -64,7 +61,6 @@ services:
       --mode=Causal
       --hash=md5
     ports:
-      - "10003:10000"
       - "8083:8080"
     networks:
       - dvk-net
@@ -81,7 +77,6 @@ services:
       --mode=Causal
       --hash=md5
     ports:
-      - "10004:10000"
       - "8084:8080"
     networks:
       - dvk-net

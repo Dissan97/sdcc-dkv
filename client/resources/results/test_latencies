@@ -1,13 +1,13 @@
 sequential 20 threads
-[15.160.209.48:8080:0.329s 15.160.209.48:8081:0.300s 15.160.209.48:8082:0.266s]
+[Rome_Center-Server:0.329s New_York_TimeSquare-Server:0.300s Madrid_PlazaMajor-Server:8082:0.266s]
 sequential: 50 threads
-[15.160.209.48:8080:0.231s 15.160.209.48:8081:0.337s 15.160.209.48:8082:0.296s]
+[Rome_Center-Server:0.231s New_York_TimeSquare-Server:0.337s Madrid_PlazaMajor-Server:8082:0.296s]
 sequential: 100 threads
-[15.160.209.48:8080:0.264s 15.160.209.48:8081:0.335s 15.160.209.48:8082:0.287s]
+[Rome_Center-Server:0.264s New_York_TimeSquare-Server:0.335s Madrid_PlazaMajor-Server:8082:0.287s]
 
 causal: 20 threads 3
-[15.160.209.48:8080:0.104s 15.160.209.48:8081:0.191s 15.160.209.48:8082:0.108s]
+[Rome_Center-Server:0.104s New_York_TimeSquare-Server:0.191s Madrid_PlazaMajor-Server:8082:0.108s]
 causal: 50 threads
-[15.160.209.48:8080:0.095s 15.160.209.48:8081:0.127s 15.160.209.48:8082:0.055s]
+[Rome_Center-Server:0.095s New_York_TimeSquare-Server:0.127s Madrid_PlazaMajor-Server:8082:0.055s]
 causal: 100 threads
-[15.160.209.48:8080:0.090s 15.160.209.48:8081:0.120s 15.160.209.48:8082:0.058s]
+[Rome_Center-Server:0.090s New_York_TimeSquare-Server:0.120s Madrid_PlazaMajor-Server:8082:0.058s]

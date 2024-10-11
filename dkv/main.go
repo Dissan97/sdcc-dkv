@@ -24,10 +24,12 @@ func main() {
 	dataPort := flag.String("d_port", "8080", "the port of the server for data")
 	opMode := flag.String("mode", utils.Sequential, "the operation mode")
 	hashFunction := flag.String("hash", "md5", "the hash function")
-	nodesToContact := flag.String("nto_contact", "localhost:9000", "nodes to contact to form the network")
+	nodesToContact := flag.String("nto_contact", "localhost:9000",
+		"nodes to contact to form the network")
 	retryDial := flag.Int("r_dial", 30, "the number of times to retry dial")
 	retryWait := flag.Int("r_wait", 50, "how many milliseconds to wait between retry dial")
 	simulateLatency := flag.Int("simulate_latency", 0, "simulating network latency")
+	// for further optimization
 	multicastTimeout := flag.Int("m_timeout", 8, "max timeout for multicast")
 	flag.Parse()
 
