@@ -33,5 +33,6 @@ func main() {
 	testEnv.Init(strings.Split(*servers, ";"), *filename, *threads)
 	testEnv.TestFunctions()
 	testEnv.StressTestPut()
+	testEnv.TestThroughPut()
 
 }
