@@ -231,10 +231,11 @@ func (te *TestEnv) TestThroughPut() {
 			for {
 				rwLock.RLock()
 				isActive = active
-				rwLock.RUnlock()
 				if !isActive {
+					rwLock.RUnlock()
 					return
 				}
+				rwLock.RUnlock()
 
 				for _, server := range te.Servers {
 
@@ -261,7 +262,6 @@ func (te *TestEnv) TestThroughPut() {
 	success = atomic.LoadInt32(&success)
 	log.Printf("Testing throughput success=%d,  throughput=%s try/seconds",
 		success, fmt.Sprintf("%.3f", float32(success)/float32(10)))
-
-	wg.Wait()
+	os.Exit(0)
 
 }

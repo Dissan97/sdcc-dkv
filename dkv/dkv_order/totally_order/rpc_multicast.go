@@ -5,6 +5,7 @@ import (
 	"log"
 	"sdcc_dkv/data"
 	"sdcc_dkv/replica"
+	"sdcc_dkv/utils"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -116,6 +117,7 @@ func (rpcMulticast *RpcSequentialMulticast) Multicast(args *MessageUpdate, reply
 				atomic.AddInt32(allSuccess, -1)
 				return
 			}
+			defer utils.CloseClient(client)
 
 			var reply bool
 			err = client.Call("RpcSequentialMulticast.Receive", msg, &reply)
@@ -126,11 +128,6 @@ func (rpcMulticast *RpcSequentialMulticast) Multicast(args *MessageUpdate, reply
 				return
 			}
 
-			err = client.Close()
-			if err != nil {
-				log.Printf("[#%d]: Error closing RPC client for node %s: %s", counter, node, err.Error())
-				return
-			}
 			log.Printf("[#%d]: Multicast request to node %s succeeded", counter, node)
 		}(&wg, k, &allSuccess)
 	}
@@ -216,7 +213,7 @@ func (rpcMulticast *RpcSequentialMulticast) Receive(args *MessageMulticast, repl
 
 			return nil
 		}
-		time.Sleep(rpcMulticast.CurrentReplica.RetryWait)
+		time.Sleep(time.Duration(i+1) * rpcMulticast.CurrentReplica.RetryWait)
 	}
 
 	// If delivery is not possible after retries
@@ -239,7 +236,7 @@ func (rpcMulticast *RpcSequentialMulticast) sendAck(guid string, ackArgs *Messag
 		log.Printf("Error dialing node %s for acknowledgment: %s", guid, err.Error())
 		return err
 	}
-
+	defer utils.CloseClient(client)
 	var reply bool
 	err = client.Call("RpcSequentialMulticast.ReceiveAck", ackArgs, &reply)
 	if err != nil {
@@ -247,11 +244,6 @@ func (rpcMulticast *RpcSequentialMulticast) sendAck(guid string, ackArgs *Messag
 		return err
 	}
 
-	err = client.Close()
-	if err != nil {
-		log.Printf("Error closing RPC client after sending acknowledgment to node %s: %s", guid, err.Error())
-		return err
-	}
 	log.Printf("Acknowledgment successfully sent to node %s", guid)
 	return nil
 }
