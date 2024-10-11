@@ -38,7 +38,7 @@ func (mq *MulticastQueue) Init() {
 
 // getKey generates a unique key for the message based on its GUID and timestamp.
 func (mq *MulticastQueue) getKey(msg *MessageMulticast) string {
-	return msg.Guid + ":" + strconv.FormatUint(msg.Timestamp, 10)
+	return msg.Key + ":" + msg.Guid + ":" + strconv.FormatUint(msg.Timestamp, 10)
 }
 
 // sort orders the messages in the queue by timestamp and GUID to ensure total ordering.
@@ -112,26 +112,6 @@ func (mq *MulticastQueue) ManageAckForTheQueue(msg *MessageAck) {
 	log.Printf("New message enqueued with key: %s after acknowledgment\n", key)
 }
 
-// Dequeue removes and returns the message with the highest priority (lowest timestamp).
-func (mq *MulticastQueue) Dequeue() *MessageMulticast {
-	mq.Lock.Lock()
-	defer mq.Lock.Unlock()
-
-	// If the queue is empty, return nil
-	if len(mq.Queue) < 1 {
-		log.Println("Dequeue attempted on empty queue")
-		return nil
-	}
-
-	// Sort and dequeue the first message
-	mq.sort()
-	msg := mq.Queue[0]
-	mq.Queue = mq.Queue[1:]
-	delete(mq.QueueMap, mq.getKey(msg))
-	log.Printf("Message dequeued with key: %s, remaining messages: %d\n", mq.getKey(msg), len(mq.Queue))
-	return msg
-}
-
 // GetMaxPriorityMessage returns the message with the highest priority (lowest timestamp)
 // and whether it is deliverable or not.
 func (mq *MulticastQueue) GetMaxPriorityMessage() (*MessageMulticast, bool) {
@@ -160,7 +140,6 @@ func (mq *MulticastQueue) RemoveMessage(args *MessageMulticast) {
 	for i, msg := range mq.Queue {
 		if key == mq.getKey(msg) {
 			mq.Queue = append(mq.Queue[:i], mq.Queue[i+1:]...)
-			log.Printf("Message forcibly removed with key: %s\n", key)
 			break
 		}
 	}
