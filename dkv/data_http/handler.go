@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"net/rpc"
 	"sdcc_dkv/dkv_order/totally_order"
 	"sdcc_dkv/replica"
 	"sdcc_dkv/utils"
@@ -143,6 +142,7 @@ func (handler *Handler) contactRpcNode(key, value, operation string) error {
 		log.Printf("error contacting rpc node %s: %s", key, err)
 		return err
 	}
+	defer utils.CloseClient(client)
 	callFunction := ""
 	if handler.rep.OperationMode == utils.Sequential {
 		callFunction = "RpcSequentialMulticast."
@@ -155,12 +155,7 @@ func (handler *Handler) contactRpcNode(key, value, operation string) error {
 	args := &totally_order.MessageUpdate{Key: key, Value: value, Operation: operation}
 	var reply bool
 	err = client.Call(callFunction, args, &reply)
-	defer func(client *rpc.Client) {
-		err = client.Close()
-		if err != nil {
-			log.Printf("error in closing client: %s", err)
-		}
-	}(client)
+
 	if err != nil {
 		log.Printf("error contacting rpc node %s: %s", key, err)
 		return err
