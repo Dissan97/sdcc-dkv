@@ -1,0 +1,13 @@
+sequential threads 20
+throughput=41.600 op/seconds
+sequential threads 50
+throughput=36.600 op/seconds
+sequential threads 100
+throughput=35.100 op/seconds
+causal threads 20
+throughput=129.800 op/seconds
+causal threads 50
+throughput=144.800 op/seconds
+causal threads 100
+throughput=246.700 op/seconds
+

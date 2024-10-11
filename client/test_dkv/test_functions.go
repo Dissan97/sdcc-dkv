@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -214,4 +215,53 @@ func (te *TestEnv) StressTestPut() {
 	}
 	mean /= float64(te.Threads)
 	log.Printf("Testing stress test threads %d took %.3f seconds\n", te.Threads, mean)
+}
+
+func (te *TestEnv) TestThroughPut() {
+	rwLock := sync.RWMutex{}
+	active := true
+	success := int32(0)
+	wg := sync.WaitGroup{}
+	wg.Add(te.Threads)
+	for i := 0; i < te.Threads; i++ {
+
+		go func(wg *sync.WaitGroup) {
+			isActive := false
+			defer wg.Done()
+			for {
+				rwLock.RLock()
+				isActive = active
+				rwLock.RUnlock()
+				if !isActive {
+					return
+				}
+
+				for _, server := range te.Servers {
+
+					for _, key := range te.Keys {
+						_, err := utils.PerformPut(server, key, fmt.Sprintf("%s", server))
+						if err == nil {
+							atomic.AddInt32(&success, 1)
+							continue
+						}
+					}
+				}
+			}
+
+		}(&wg)
+	}
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(1 * time.Second)
+	}
+
+	rwLock.Lock()
+	active = false
+	rwLock.Unlock()
+	success = atomic.LoadInt32(&success)
+	log.Printf("Testing throughput success=%d,  throughput=%s try/seconds",
+		success, fmt.Sprintf("%.3f", float32(success)/float32(10)))
+
+	wg.Wait()
+
 }
