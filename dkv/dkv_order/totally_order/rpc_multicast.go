@@ -106,11 +106,10 @@ func (rpcMulticast *RpcSequentialMulticast) Multicast(args *MessageUpdate, reply
 		go func(wg *sync.WaitGroup, node string, allSuccess *int32) {
 			defer wg.Done()
 			rpcMulticast.CurrentReplica.Lock.RLock()
-			defer rpcMulticast.CurrentReplica.Lock.RUnlock()
-
 			log.Printf("[#%d]: Sending multicast request to node %s", counter, node)
 			client, err := rpcMulticast.CurrentReplica.DialWithRetries(curr.Replicas[node].Hostname +
 				":" + curr.Node.MulticastPort)
+			rpcMulticast.CurrentReplica.Lock.RUnlock()
 			if err != nil {
 				log.Printf("[#%d]: Multicast request to node %s failed with error: %s", counter,
 					node, err.Error())
@@ -225,18 +224,22 @@ func (rpcMulticast *RpcSequentialMulticast) Receive(args *MessageMulticast, repl
 
 // sendAck Send acknowledgment to the specified node
 func (rpcMulticast *RpcSequentialMulticast) sendAck(guid string, ackArgs *MessageAck) error {
+	
 	curr := rpcMulticast.CurrentReplica
 	curr.Lock.RLock()
-	defer curr.Lock.RUnlock()
+	replicaInfo := curr.Replicas[guid]
+	curr.Lock.RUnlock()
 
 	log.Printf("Sending acknowledgment to node %s", guid)
-	client, err := rpcMulticast.CurrentReplica.DialWithRetries(curr.Replicas[guid].Hostname + ":" +
-		curr.Replicas[guid].MulticastPort)
+
+	
+	client, err := rpcMulticast.CurrentReplica.DialWithRetries(replicaInfo.Hostname + ":" + replicaInfo.MulticastPort)
 	if err != nil {
 		log.Printf("Error dialing node %s for acknowledgment: %s", guid, err.Error())
 		return err
 	}
 	defer utils.CloseClient(client)
+
 	var reply bool
 	err = client.Call("RpcSequentialMulticast.ReceiveAck", ackArgs, &reply)
 	if err != nil {
@@ -254,7 +257,6 @@ func (rpcMulticast *RpcSequentialMulticast) ReceiveAck(args *MessageAck, reply *
 	rpcMulticast.CurrentReplica.SimulateLatency()
 	counter := atomic.AddUint64(&rpcMulticast.globalCounterReceive, 1)
 	log.Printf("[#%d]: Received acknowledgment for message key: %s", counter, args.Message.Key)
-
 	rpcMulticast.Queue.ManageAckForTheQueue(args)
 	*reply = true
 	return nil
